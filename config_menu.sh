@@ -1,0 +1,886 @@
+#!/bin/bash
+
+# run menu only if connect via bluetooth or called with "--force"
+if [[ "`tty`" != "/dev/rfcomm0" && $1 != "--force" ]]; then
+    bash -l
+    exit
+fi
+
+AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+if [[ ! -f $AM_SHARED_FILE ]]; then
+    echo "Can't find shared code file $AM_SHARED_FILE"
+    exit 100
+fi
+. $AM_SHARED_FILE
+
+function site_menu () {
+    while true; do
+	local prompt="\nPick an item number, or 0 to exit this menu:"
+	local options=("Site Name" "Lat/Long/Alt" "Host Name")
+	local quit=""
+	echo -e "$prompt "
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0) quit=1
+	       ;;
+	    1) sitename_select
+	       ;;
+	    2) latlong_input
+	       ;;
+	    3) set_hostname
+	       ;;
+        esac
+	if [[ "$quit" == 1 ]]; then
+            break
+	fi
+    done
+}
+
+function sitename_select () {
+    get_conf SITENAME_FILE sitename.file
+    printf "\nSite Name\n\n"
+    if [[ -f "$SITENAME_FILE" ]]; then
+	SITE=`cat "$SITENAME_FILE"`
+    else
+	SITE=UNDEPLOYED
+    fi
+    printf "Current sitename: %s\n\n" $SITE
+    while true; do
+	printf "Setting a new sitename restarts audio capture.\nEnter new site name: (or empty line to cancel) \n"
+	read SITE
+	if [[ ! $SITE =~ [[:space:]] ]]; then
+	    break
+	fi
+	printf "\nSite name must not contain spaces - try again.\n"
+    done
+    if [[ "$SITE" == "" ]]; then
+	echo "Site name change cancelled."
+	return
+    fi
+    new_sitename $SITE
+}
+
+function new_sitename () {
+    echo $1 > "$SITENAME_FILE"
+    restart_capture
+}
+
+function set_hostname () {
+    printf "\nHost Name\n\n"
+    printf "Current host: %s\n\n" `hostname`
+    while true; do
+	printf "Setting a new hostname will reboot the AMPi.\nEnter new host name: (or empty line to cancel) \n"
+	read HOST
+	if [[ ! $HOST =~ [[:space:]] ]]; then
+	    break
+	fi
+	printf "\nHost name must not contain spaces - try again.\n"
+    done
+    if [[ "$HOST" == "" ]]; then
+	echo "Host name change cancelled."
+	return
+    fi
+    new_hostname $HOST
+}
+
+function new_hostname () {
+    echo $1 > "/etc/hostname"
+    printf "\nRebooting now...\n\n\n"
+    sleep 1
+    reboot
+}
+
+function latlong_input () {
+    get_conf LATITUDE latitude
+    get_conf LONGITUDE longitude
+    get_conf ALTITUDE altitude
+    while true; do
+	printf "\nCurrent\n  Latitude: %s\n  Longitude: %s\n  Altitude: %s\n" $LATITUDE $LONGITUDE $ALTITUDE
+	local prompt="\nPick an item number, or 0 to exit this menu:"
+	local options=("Set Latitude" "Set Longitude" "Set Altitude")
+	local quit=""
+	local lat
+	local lon
+	local alt
+	echo -e "$prompt "
+	local okay=""
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0) quit=1
+	       ;;
+	    1) printf "Enter new Latitude (or Enter): "
+	       read lat
+	       if [[ $lat == "" ]]; then
+		   printf "Latitude not changed\n"
+		   okay=1
+	       else
+		   if [[ $lat =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
+		       if [[ ${lat%%.*} -ge -90 && ${lat%%.*} -le 90 ]]; then
+			   LATITUDE=$lat
+			   put_conf latitude $LATITUDE
+			   okay=1
+		       fi
+		   fi
+	       fi
+	       if [[ ! $okay ]]; then
+		   printf "Bad latitude; must be number in range -90...90\n"
+	       fi
+	       ;;
+	    2) printf "Enter new Longitude (or Enter): "
+	       read lon
+	       if [[ $lon == "" ]]; then
+		   printf "Longitude not changed\n"
+		   okay=1
+	       else
+		   if [[ $lon =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
+		       if [[ ${lon%%.*} -ge -180 && ${lon%%.*} -le 180 ]]; then
+			   LONGITUDE=$lon
+			   put_conf longitude $LONGITUDE
+			   okay=1
+		       fi
+		   fi
+	       fi
+	       if [[ ! $okay ]]; then
+		   printf "Bad longitude; must be number in range -180...180\n"
+	       fi
+	       ;;
+	    3) printf "Enter new Altitude (or Enter): "
+	       read alt
+	       if [[ $alt == "" ]]; then
+		   printf "Altitude not changed\n"
+		   okay=1
+	       else
+		   if [[ $alt =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
+		       if [[ ${alt%%.*} -ge -10000 && ${alt%%.*} -le 10000 ]]; then
+			   ALTITUDE=$alt
+			   put_conf altitude $ALTITUDE
+			   okay=1
+		       fi
+		   fi
+	       fi
+	       if [[ ! $okay ]]; then
+		   printf "Bad altitude; must be number in range -10000...10000\n"
+	       fi
+	       ;;
+        esac
+	if [[ "$quit" == 1 ]]; then
+            break
+	fi
+    done
+}
+
+# restart capture on all audiomoths
+function restart_capture () {
+    # in case samples are being streamed but not recorded, stop doing so,
+    # because restarting capture will immediately start recording and streaming samples.
+    stop_streaming_samples
+    systemctl restart ampi-capture@*
+}
+
+function my_select () {
+    # print a numbered list of the items supplied, and let the user choose
+    # one with a number.  Returns the number in $REPLY and the item in $CHOICE.
+    # if the first argument is "allow_empty" it is removed, and the empty
+    # choice is allowed and returns REPLY="", CHOICE=""
+    local allow_empty
+    if [[ "$1" == "allow_empty" ]]; then
+	shift
+	allow_empty=1
+    fi
+    local choices=("$@")
+    while true; do
+	CHOICE=""
+	REPLY=""
+	local i
+	if [[ $allow_empty ]]; then
+	    i=0
+	else
+	    i=1
+	fi
+	for c in "${choices[@]}"; do
+	    printf "%d) %s\n" $i "$c"
+	    i=$(( $i + 1 ))
+	done
+	printf "=>  "
+	read REPLY
+	if [[ "$allow_empty" != "" && "$REPLY" == "" ]]; then
+	    return
+	fi
+	if [[ "$REPLY" =~ ^[0-9]+$ && ($REPLY -ge 0 || $REPLY -le ${#@}) ]]; then
+	    CHOICE="${choices[$(( $REPLY - 1 ))]}"
+	    return
+	fi
+	echo "bad choice; must be integer from 0 to ${#@}"
+	if [[ $allow_empty ]]; then
+	    echo "or hit enter to retain current setting"
+	fi
+    done
+}
+
+function wifi_menu () {
+    WPA="wpa_cli -i wlan0"
+    NMCLI="/usr/bin/nmcli"
+    while true; do
+        printf "\nWiFi Config\n\n"
+        curr=`$WPA status | grep ^ssid= | sed -e 's/^ssid=//'`
+        mapfile -t all < <($WPA scan_results | awk '$5 !~ /^\\x00/ && $5 != "" {$1="";$2="";$4="";print }' | sort -n -r | tail -n+2 | awk '{for(i=1; i < NF; ++i) $i=$(i+1);--NF;print}' )
+        if [[ $curr != "" ]]; then
+            printf "Connected to $curr\n\n"
+        else
+            printf "Not connected.\n\n"
+        fi
+        printf "Pick 1 for Rescan, a network number,\nor 0 to exit this menu:\n"
+        my_select "Rescan" "${all[@]}"
+        case "$REPLY" in
+            0) return
+	       ;;
+            1) echo scanning...
+               $WPA scan
+               sleep 5
+               ;;
+            *) ESSID="${all[$(( $REPLY - 2 ))]}";
+               printf "Enter passphrase for network '%s',\nor hit Enter to use existing password: " "$ESSID"
+               read P
+               if [[ "$P" != "" ]]; then
+                   P="password \"$P\""
+               fi
+               CMD="$NMCLI device wifi con \"$ESSID\" $P 2>&1"
+	       printf "Trying to connect to $ESSID...\n"
+               read CONRES < <( bash -c "$CMD" 2>&1)
+               if [[ "$CONRES" =~ "successfully activated" ]]; then
+                   printf "\nSuccess:  Connected to %s\n" "$ESSID"
+               else
+                   printf "\nFailed to connect to %s - bad password?\nError was: %s\n" "$ESSID" "$CONRES"
+               fi
+               ;;
+        esac
+    done
+}
+
+function listen_live () {
+    set -m
+    serno=$1
+    stop_listening
+    local dir=$AM_DEV_DIR/$serno
+    local devno=`readlink $dir/device_num`
+    local devname="hw:CARD=$devno,DEV=0"
+    get_conf AUDIO_STREAM_BASE_PORT audio.stream.base.port
+    get_conf OUTPUT_SAMPLE_RATE output.sample.rate
+    get_conf LISTEN_LIVE_DURATION listen.live.duration
+    local streamport=$(( $AUDIO_STREAM_BASE_PORT + $devno ))
+    # wait until we know we'll have at least a few seconds of forecast stability
+    local now=`date +%s`
+    local i
+    for i in `seq 1 5`; do
+	local until=`readlink $dir/until`
+	local left=$(( $until - $now ))
+	if [[ $left -le 2 ]]; then
+	    sleep 2
+	else
+	    break
+	fi
+    done
+    if [[ $i == 5 ]]; then
+	echo Unable to listen to $serno
+	return
+    fi
+    local state=`readlink $dir/state`
+    if [[ "$state" == "sleep" ]]; then
+	# send raw audio to the streamport for nearly all of the remaining sleep period;
+	# if $state == "record", this streaming is already happening
+	if ! set_am_mode; then
+	    echo Audiomoth config changed.
+	    echo Waiting 2 seconds before listening.
+	    sleep 2
+	    local devno=`readlink $dir/device_num`
+	    local devname="hw:CARD=$devno,DEV=0"
+	fi
+	ffmpeg -loglevel error -t $(($left - 2))  -f alsa -channels 1 -i hw:$devno -ar $OUTPUT_SAMPLE_RATE  -f s16le -ar 22050 -acodec pcm_s16le -flush_packets 1 -reuse 1 -connect 0 udp://127.0.0.1:$streamport 2>/dev/null &
+	STREAM_SAMPLES_PID=$!
+    fi
+    # start streaming raw audio from the socket to the jack via aplay; this works regardless of whether files
+    # are being recorded
+    socat -T 3 -u UDP-RECV:$streamport - 2>/dev/null| aplay -D 'hw:CARD=Headphones,DEV=0' -t raw -r $OUTPUT_SAMPLE_RATE -f S16_LE -d $LISTEN_LIVE_DURATION 2>/dev/null &
+    LISTEN_LIVE_PID=$!
+    LISTEN_LIVE_SERNO=$serno
+    echo Listening to $LISTEN_LIVE_SERNO
+}
+
+function stop_listening() {
+    set -m
+    if [[ "$LISTEN_LIVE_PID" != "" ]]; then
+	wait $LISTEN_LIVE_PID > /dev/null 2>&1 &
+	sleep 0.1
+	kill -INT $LISTEN_LIVE_PID > /dev/null 2>&1
+	echo Stopped listening to $LISTEN_LIVE_SERNO
+ 	LISTEN_LIVE_PID=""
+	LISTEN_LIVE_SERNO=""
+	stop_streaming_samples
+    fi
+}
+
+# stop streaming samples from an audio device to the
+# UDP listening port
+function stop_streaming_samples() {
+    if [[ "$STREAM_SAMPLES_PID" != "" ]]; then
+	wait $STREAM_SAMPLES_PID > /dev/null 2>&1 &
+	sleep 0.1
+	kill -INT $STREAM_SAMPLES_PID
+	STREAM_SAMPLES_PID=""
+    fi
+}
+
+# return an array of audiomoth serial numbers in AM
+function get_audiomoths() {
+    # get list of audiomoth serial numbers
+    read -a AM < <( ls -1 $AM_DEV_DIR 2>/dev/null | grep -P '[0-9A-F]{16}$' | tr '\n' ' ' )
+}
+
+# track whether we have unsaved config
+AM_CONFIG_CHANGED=""
+
+function audiomoth_config () {
+    get_conf INPUT_SAMPLE_RATE input.sample.rate
+    get_conf AM_GAIN_LEVEL am.gain.level
+    get_conf AM_FILTER am.filter
+    get_conf AM_ESM am.esm
+    get_conf AM_D48 am.d48
+    while true; do
+	local am_other_options="$AM_FILTER ${AM_ESM:+ESM} ${AM_D48:+D48}"
+	if [[ "$am_other_options" == "  " ]]; then
+	    am_other_options="(none)"
+	fi
+	local prompt="Pick an item number, or 0 to exit this menu:"
+	local options=("Set Rate" "Set Gain" "Choose Filter" "Toggle Energy Saver Mode (ESM)" "Toggle Disable DC Blocking (D48)")
+	printf "Audiomoth configuration\nSample rate: %d\nGain: %s\nFilter and other options: %s\n" \
+	       $INPUT_SAMPLE_RATE "${AM_GAIN_VALUES[$AM_GAIN_LEVEL]}" "$am_other_options"
+	echo -e "\n$prompt "
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0) if [[ $AM_CONFIG_CHANGED ]]; then
+		   printf "Changes to configuration have been saved,\nbut only take effect at the next recording\nperiod.  Do you want to restart recording now\nusing the new configuration (y/N)? "
+		   local resp
+		   read resp
+		   if [[ "$resp" =~ ^[yY]$ ]]; then
+		       stop_listening
+		       restart_capture
+		       AM_CONFIG_CHANGED=""
+		       echo "Recording(s) restarted."
+		   fi
+	       fi
+	       return
+	       ;;
+	    1) audiomoth_rate
+	       ;;
+	    2) audiomoth_gain
+	       ;;
+	    3) audiomoth_filter
+	       ;;
+	    4) if [[ $AM_ESM ]]; then
+		   AM_ESM=""
+	       else
+		   AM_ESM=1
+	       fi
+	       put_conf am.esm $AM_ESM
+	       AM_CONFIG_CHANGED=1
+	       ;;
+	    5) if [[ $AM_D48 ]]; then
+		   AM_D48=""
+	       else
+		   AM_D48=1
+	       fi
+	       put_conf am.d48 $AM_D48
+	       AM_CONFIG_CHANGED=1
+	       ;;
+	esac
+    done
+}
+
+
+function audiomoth_rate() {
+    local prompt="Pick a rate number, or 0 to keep current rate:"
+    local options=(8000 16000 32000 48000 96000 192000 250000 384000)
+    printf "Current audiomoth sample rate: %d Hz\n" $INPUT_SAMPLE_RATE
+    echo -e "$prompt "
+    my_select "${options[@]}"
+    if [[ $REPLY == "0" || $CHOICE == $INPUT_SAMPLE_RATE ]]; then
+	printf "Rate not changed\n"
+	return
+    fi
+    put_conf input.sample.rate $CHOICE
+    INPUT_SAMPLE_RATE=$CHOICE
+    AM_CONFIG_CHANGED=1
+    printf "Sample rate changed to %d Hz\n" $INPUT_SAMPLE_RATE
+}
+
+function audiomoth_gain() {
+    local prompt="Pick a gain number, or 0 to keep current gain:"
+    local -a options=("${AM_GAIN_VALUES[@]:1}")
+    printf "Current audiomoth gain value: %s\n" "${AM_GAIN_VALUES[$AM_GAIN_LEVEL]}"
+    echo -e "$prompt "
+    my_select "${options[@]}"
+    if [[ $REPLY == 0 || $REPLY == $AM_GAIN_LEVEL ]]; then
+	echo "Current gain level retained."
+	return
+    fi
+    put_conf am.gain.level $REPLY
+    AM_GAIN_LEVEL=$REPLY
+    AM_CONFIG_CHANGED=1
+    printf "Gain level changed to %s\n" "$CHOICE"
+}
+
+function audiomoth_filter() {
+    local prompt="Pick the number of a filter type, or 0 to keep current filter:"
+    local options=(low-pass high-pass band-pass)
+    if [[ "$AM_FILTER" ]]; then
+	options[${#options[*]}]="disable filter"
+    fi
+    printf "Current audiomoth filter: %s\n" "${AM_FILTER:-(none)}"
+    echo -e "$prompt "
+    my_select "${options[@]}"
+    case $REPLY in
+	0) printf "Filter not changed\n"
+	   return
+	   ;;
+	1) audiomoth_pass_filter low
+	   ;;
+	2) audiomoth_pass_filter high
+	   ;;
+	3) audiomoth_bandpass_filter
+	   ;;
+	4) audiomoth_disable_filter
+    esac
+}
+
+# configure a low or high pass filter
+# $1 is "low" or "high"
+function audiomoth_pass_filter() {
+
+    local max=$(( $INPUT_SAMPLE_RATE / 200 * 100 ))
+    while true; do
+	local prompt="The $1 pass cut-off frequency must be\nbetween 0 and $max, and divisible by 100.\nEnter $1 pass cut-off frequency in Hz,\nor 0 to keep current filter:\n=> "
+	printf "Current audiomoth filter: %s\n$prompt " "${AM_FILTER:-(none)}"
+	read REPLY
+	if [[ ! "$REPLY" =~ ^[0-9]+$ ]]; then
+	    printf "Bad value; need a number\n"
+	    continue
+	fi
+	if [[ $REPLY == 0 ]]; then
+	    printf "Filter not changed\n"
+	    return
+	fi
+	if [[ $REPLY -gt $max ]]; then
+	    printf "Cut-off frequency must be at most $max Hz\n"
+	    continue
+	fi
+	if [[ ! $REPLY =~ 00$ ]]; then
+	    REPLY=$(( $REPLY / 100 * 100 ))
+	    printf "Cut-off frequency truncated to $REPLY\n"
+	fi
+	if [[ $1 == low ]]; then
+	    AM_FILTER="lpf $REPLY"
+	else
+	    AM_FILTER="hpf $REPLY"
+	fi
+	printf "New filter: $AM_FILTER\n"
+	put_conf am.filter "$AM_FILTER"
+	AM_CONFIG_CHANGED=1
+	return
+    done
+}
+
+# configure a bandpass filter
+function audiomoth_bandpass_filter() {
+    local low high
+    local max=$(( $INPUT_SAMPLE_RATE / 200 * 100 ))
+    while true; do
+	local prompt="The low and high cut-off frequencies must be\nbetween 0 and $max, and divisible by 100.\nEnter low and high cut-off frequencies\nseparated by a space or just\nenter to keep current filter:\n=> "
+	printf "Current audiomoth filter: %s\n$prompt " "${AM_FILTER:-(none)}"
+	read low high
+	if [[ "$low" == "" ]]; then
+	    printf "Filter not changed\n"
+	    return
+	fi
+	if [[ ! "$low" =~ ^[0-9]+$ ]]; then
+	    printf "Bad value for low cut-off frequency\n"
+	    continue
+	fi
+	if [[ $low -gt $max ]]; then
+	    printf "Low cut-off frequency must be at most $max Hz\n"
+	    continue
+	fi
+	if [[ ! $low =~ 00$ ]]; then
+	    low=$(( $low / 100 * 100 ))
+	    printf "Low cut-off frequency truncated to $low\n"
+	fi
+	if [[ ! "$high" =~ ^[0-9]+$ ]]; then
+	    printf "Bad value for high cut-off frequency\n"
+	    continue
+	fi
+	if [[ $high -gt $max ]]; then
+	    printf "High cut-off frequency must be at most $max Hz\n"
+	    continue
+	fi
+	if [[ ! $high =~ 00$ ]]; then
+	    high=$(( $high / 100 * 100 ))
+	    printf "High cut-off frequency truncated to $high\n"
+	fi
+	if [[ $low -ge $high ]]; then
+	    printf "Low cut-off frequency must be lower than the high one\n"
+	    continue
+	fi
+	AM_FILTER="bpf $low $high"
+	printf "New filter: $AM_FILTER\n"
+	put_conf am.filter "$AM_FILTER"
+	AM_CONFIG_CHANGED=1
+	return
+    done
+}
+
+function audiomoth_disable_filter () {
+    AM_FILTER=""
+    put_conf am.filter ""
+    AM_CONFIG_CHANGED=1
+    return
+}
+
+function audio_menu () {
+    echo Attached Audiomoths:
+    get_audiomoths
+    if [[ ${#AM[*]} -gt 0 ]]; then
+	echo "Serial Number     State  Until"
+	local sn
+	for sn in ${AM[*]}; do
+	    state=`readlink $AM_DEV_DIR/$sn/state`
+	    untilts=`readlink $AM_DEV_DIR/$sn/until`
+	    until=`date +%H:%M:%S --date @$untilts`
+	    printf "%16s %6s %s\n" $sn $state $until
+	done
+    else
+	echo No Audiomoths currently attached.
+    fi
+
+    while true; do
+	local prompt="\nPick an item number, or 0 to exit this menu:"
+	local options=("Current Activity" "Recent Activity" "Files Awaiting Upload" "Configure Audiomoth" "Configure Recordings")
+	local have_stop=0
+	if [[ "$LISTEN_LIVE_PID" != "" ]]; then
+	    options[${#options[*]}]="Stop listening to $LISTEN_LIVE_SERNO"
+	    have_stop=1
+	fi
+	for sn in ${AM[*]}; do
+	    if [[ $sn != $LISTEN_LIVE_SERNO ]]; then
+		options[${#options[*]}]="Listen live to $sn"
+	    fi
+	done
+	local quit=""
+	echo -e "$prompt "
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0) quit=1
+	       ;;
+	    1) printf "Active uploads:\n"
+	       local pids
+	       pids=$(pgrep 'aws')
+	       if [[ "$pids" == "" ]]; then
+		   echo None
+	       else
+		   ps --no-heading -w -w -o command $pids
+	       fi
+	       printf "Active recordings:\n"
+	       pids=$(pgrep -f 'ffmpeg.*flac')
+	       if [[ "$pids" == "" ]]; then
+		   echo None
+	       else
+		   ps --no-heading -w -w -o command $pids
+	       fi
+	       ;;
+	    2) printf "Latest 3 hours of activity\n(this may take a minute)\n"
+	       journalctl -S "3 hours ago" -u 'ampi-capture@*' -u 'queued-uploader' --no-hostname | cat
+	       ;;
+	    3) get_conf DATA_DIR data.dir
+	       echo "Files in $DATA_DIR waiting for upload:"
+	       (cd /data; (stat -c "%n %s" [^_]* 2>/dev/null || echo "  None." ) | sed -e 's/@/\//g')
+	       echo "Incomplete files in $DATA_DIR:"
+	       (cd /data; (stat -c "%n %s" _*  2>/dev/null || echo "  None." ) | sed -e 's/@/\//g')
+	       ;;
+	    4) audiomoth_config
+	       ;;
+	    5) recording_config
+	       ;;
+	    *) if [[ $have_stop == 1 && $REPLY == 6 ]]; then
+		   stop_listening
+	       else
+		   local am=${CHOICE//* /}
+		   if [[ "$am" != "" ]]; then
+		       listen_live $am
+		   else
+		       echo "Invalid option. Try another one."
+		   fi
+	       fi
+	       ;;
+        esac
+	if [[ "$quit" == 1 ]]; then
+            break
+	fi
+    done
+    stop_listening
+}
+
+# track whether we have unsaved config
+REC_CONFIG_CHANGED=""
+
+function recording_config () {
+    get_conf OUTPUT_SAMPLE_RATE output.sample.rate
+    get_conf RECORDING_DURATION recording.duration
+    get_conf RECORDING_SPACING recording.spacing
+    while true; do
+	local prompt="Pick an item number, or 0 to exit this menu:"
+	local options=("Sample rate for files" "Recording duration" "Recording spacing" "Schedule")
+	printf "Recording configuration\nSample rate for files: %d\nRecording duration(s): %d\nRecording spacing (s): %d\n" \
+	       $OUTPUT_SAMPLE_RATE $RECORDING_DURATION $RECORDING_SPACING
+	echo -e "\n$prompt "
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0) if [[ $REC_CONFIG_CHANGED ]]; then
+		   printf "Changes to configuration have been saved,\nbut only take effect at the next recording\nperiod.  Do you want to restart recording now\nusing the new configuration (y/N)? "
+		   local resp
+		   read resp
+		   if [[ "$resp" =~ ^[yY]$ ]]; then
+		       restart_capture
+		       REC_CONFIG_CHANGED=""
+		       echo "Recording(s) restarted."
+		   fi
+	       fi
+	       return
+	       ;;
+	    1) recording_rate
+	       ;;
+	    2) recording_duration
+	       ;;
+	    3) recording_spacing
+	       ;;
+	    4) recording_schedule
+	       ;;
+	esac
+    done
+}
+
+function recording_rate() {
+    local prompt="Pick a rate number, or 0 to keep current rate:"
+    local options=(8000 16000 22050 32000 44100 48000 96000 192000 250000 384000)
+    printf "Current sample rate for files: %d Hz\n" $OUTPUT_SAMPLE_RATE
+    echo -e "$prompt "
+    my_select "${options[@]}"
+    if [[ $REPLY == "0" || $CHOICE == $OUTPUT_SAMPLE_RATE ]]; then
+	printf "Rate not changed\n"
+	return
+    fi
+    put_conf output.sample.rate $CHOICE
+    OUTPUT_SAMPLE_RATE=$CHOICE
+    REC_CONFIG_CHANGED=1
+    printf "File sample rate changed to %d Hz\n" $OUTPUT_SAMPLE_RATE
+}
+
+function recording_duration() {
+    local prompt="Enter duration per recording (in seconds)\nor enter to keep current recording duration:"
+    while true; do
+	printf "Current recording duration: %d s\n" $RECORDING_DURATION
+	echo -e "$prompt "
+	local REPLY
+	read REPLY
+	if [[ ! $REPLY || "$REPLY" == "0" ]]; then
+	    printf "Duration not changed\n"
+	    return
+	fi
+	if [[ ! $REPLY =~ ^[0-9]+$ ]]; then
+	    printf "Bad number; try again\n"
+	    continue
+	fi
+	break
+    done
+    put_conf recording.duration $REPLY
+    RECORDING_DURATION=$REPLY
+    REC_CONFIG_CHANGED=1
+    printf "Recording duration changed to %d s\n" $RECORDING_DURATION
+}
+
+function recording_spacing() {
+    local prompt="Enter spacing between recordings (in seconds)\nor enter to keep current spacing:"
+    while true; do
+	printf "Current recording spacing: %d s\n" $RECORDING_SPACING
+	echo -e "$prompt "
+	local REPLY
+	read REPLY
+	if [[ ! $REPLY ]]; then
+	    printf "Spacing not changed\n"
+	    return
+	fi
+	if [[ ! $REPLY =~ ^[0-9]+$ ]]; then
+	    printf "Bad number; try again\n"
+	    continue
+	fi
+	break
+    done
+    put_conf recording.spacing $REPLY
+    RECORDING_SPACING=$REPLY
+    REC_CONFIG_CHANGED=1
+    printf "Recording spacing changed to %d s\n" $RECORDING_SPACING
+}
+
+function recording_schedule() {
+    printf "Current recording schedule:\n\n"
+    local SCHEDFILE=/etc/shiftwrap/services/ampi-capture@.yml
+    grep -v issystemd $SCHEDFILE
+    printf "\n\nTo change this schedule, ssh and edit:\n$SCHEDFILE\n\n"
+}
+
+
+function storage_info () {
+    printf "\nAvailable local storage:\n"
+    df -h /data
+    while true; do
+	local prompt="Pick an item number, or 0 to exit this menu:"
+	local options=("Select existing credentials" "Enter new credentials" )
+	printf "\nCurrent cloud credentials:\n"
+	get_conf SECRETS_FILE secrets.file
+	if [[ -f $SECRETS_FILE  ]]; then
+	    echo "# `readlink $SECRETS_FILE`"
+	    cat $SECRETS_FILE
+	else
+	    printf "None."
+	fi
+	echo -e "\n$prompt "
+	my_select "${options[@]}"
+        case "$REPLY" in
+	    0 ) return ;;
+	    1 ) select_cloud_credentials ;;
+	    2 ) enter_new_credentials ;;
+	esac
+    done
+}
+
+function select_cloud_credentials () {
+    local prompt="Pick a credential set to use, or 0 to keep current choice:"
+    local options=( `cd /opt/ampi && ls -1 *_amazon_secrets.txt` )
+    echo -e "$prompt "
+    my_select "${options[@]}"
+    if [[ $REPLY == "0" ]]; then
+	printf "credentials not changed\n"
+	return
+    fi
+    local FILE=/opt/ampi/${CHOICE}
+    ln -s -f $FILE /opt/ampi/amazon_secrets.txt
+    printf "Now using credentials from ${FILE}\n.Restarting queued-uploader\n"
+    systemctl restart queued-uploader
+}
+
+
+function enter_new_credentials () {
+    printf "\nEnter a short label for the\nnew credentials (or Enter to cancel): "
+    read REPLY
+    if [[ "$REPLY" == "" ]]; then
+	return
+    fi
+    local NEW_SECRETS_BASENAME="${REPLY}_amazon_secrets.txt"
+    local NEW_SECRETS_FILE="/opt/ampi/$NEW_SECRETS_BASENAME"
+    printf "Enter new cloud credential lines followed by an empty line:\n"
+    local -a cc
+    while true; do
+	printf "=> "
+	read REPLY
+	if [[ "$REPLY" == "" ]]; then
+	    break
+	fi
+	cc[${#cc[*]}]="$REPLY"
+    done
+    printf "You entered these new credentials:\n"
+    local cci
+    echo "# $NEW_SECRETS_BASENAME"
+    for cci in "${cc[@]}"; do
+	printf "   %s\n" "$cci"
+    done
+    printf "Do you want to use these (y/N)? "
+    read REPLY
+    if [[ "$REPLY" =~ ^[yY]$ ]]; then
+	rm -f $NEW_SECRETS_FILE
+	for cci in "${cc[@]}"; do
+	    printf "   %s\n" "$cci" >> $NEW_SECRETS_FILE
+	done
+	chown pi:pi $NEW_SECRETS_FILE
+	ln -s -f $NEW_SECRETS_BASENAME $SECRETS_FILE
+	printf "New cloud credentials saved.\nDo you want to restart the uploader (y/N)? "
+	read REPLY
+	if [[ "$REPLY" =~ ^[yY]$ ]]; then
+	    systemctl restart queued-uploader
+	fi
+	return
+    fi
+    printf "Cancelling change of credentials.\n"
+}
+
+UPDATE_URL=https://whoflewby.org/ampi_update.tar.xz
+UPDATE_TARGET=/home/pi/update.tar.xz
+
+function remote_update () {
+    printf "\n\nThis will fetch the update at\n$UPDATE_URL\ninstall it, then reboot.\n\nProceed (y/N)? "
+    read REPLY
+    if [[ ! "$REPLY" =~ ^[yY]$ ]]; then
+	printf "\n\nUpdate cancelled.\n\n"
+	return
+    fi
+    cd /tmp
+    if ! curl -o $UPDATE_TARGET $UPDATE_URL; then
+	printf "\n\nUnable to download update file\n\n"
+	return
+    fi
+    printf "\n\nInstalling update...\n"
+    systemctl stop ampi-capture@*
+    systemctl stop shiftwrapd
+    systemctl stop queued-uploader
+    cd /
+    tar -xJvf $UPDATE_TARGET
+    printf "\n\Rebooting ...\n"
+    sleep 1
+    reboot
+}
+
+
+function run_shell () {
+    printf "\n\nRunning shell.\nEnter 'exit' to return to this menu.\n"
+    PS1="(shell - exit to return to menu)\n$ "
+    export PS1
+    bash -m
+}
+
+# don't spew errors on pipes breaking when e.g. a listening process is killed
+trap '' PIPE
+
+title="--- Configuration Menu for Device `hostname` ---"
+prompt="Pick an item (or 0 to exit):"
+options=("Site Info" "WiFi" "Audio" "Storage and Upload" "Update and Reboot" "Enter linux shell")
+
+while true; do
+    echo -e "$title\n$prompt "
+    my_select "${options[@]}"
+    case "$REPLY" in
+        0) echo "Goodbye!"
+	   QUIT=1
+	   ;;
+	1) site_menu
+	   ;;
+        2) wifi_menu
+	   ;;
+        3) audio_menu
+	   ;;
+        4) storage_info
+	   ;;
+	5) remote_update
+	   ;;
+        6) run_shell
+	   ;;
+    esac
+    if [[ "$QUIT" == 1 ]]; then
+        break
+    fi
+done

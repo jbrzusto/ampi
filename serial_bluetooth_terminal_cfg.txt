@@ -1,0 +1,28 @@
+{
+  "package": "de.kai_morich.serial_bluetooth_terminal",
+  "date": " 20250204-100043",
+  "config": {
+    "pref_auto_scroll": true,
+    "pref_char_delay": "0",
+    "pref_charset": "UTF-8",
+    "pref_clear_send": true,
+    "pref_device_address": "B8:27:EB:82:96:A0",
+    "pref_device_le": false,
+    "pref_device_name": "ampi-2",
+    "pref_device_tab": 0,
+    "pref_font_family": "1",
+    "pref_font_size": "14",
+    "pref_keep_screen_on": false,
+    "pref_line_delay": "0",
+    "pref_macro_rows": "0",
+    "pref_receive_buffer_size": "200000",
+    "pref_receive_display_mode": "2",
+    "pref_receive_newline": "LF",
+    "pref_send_display_mode": "0",
+    "pref_send_newline": "LF",
+    "pref_show_send": true,
+    "pref_show_status": true,
+    "pref_show_timestamp": false,
+    "pref_timestamp_format": "HH:mm:ss.SSS"
+  }
+}

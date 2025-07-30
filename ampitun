@@ -1,0 +1,49 @@
+#!/bin/bash
+#
+# ampitun - forward local ports to the ssh port on each
+# system with a tunnel port configured on whoflewby.org
+#
+# If you specify '--update', this script also creates/updates entries in
+# ~/.ssh/config for these hosts, delimited by comments:
+#
+# ### BEGIN AMPI-TUNNEL-CONFIG
+# ### END AMPI-TUNNEL-CONFIG
+#
+# This script requires the public/private key pair id_ed25519_radarcam_radarcam(.pub)
+# to be present in ~/.ssh
+
+WFBUSER=ampi@wfb
+SSHCONF=~/.ssh/config
+SSHCONFSAVED=~/.ssh/config.saved
+SSHCONFNEW=~/.ssh/config.new
+if ! ssh $WFBUSER date > /dev/null 2>&1 ; then
+    cat <<EOF
+To use this script, you need to have ssh keys for $WFBUSER,
+and a block in ~/.ssh/config to use them.
+To get these, contact the whoflewby admin.
+
+EOF
+    exit 1
+fi
+
+printf "Mapping local ports to remote ports for connected systems:\n"
+mapfile -t -n 0 HOSTS < <( ssh $WFBUSER ls -1 /run/ampi/dev )
+if [[ 0 == ${#HOSTS[*]} ]]; then
+    printf "No hosts are connected to the server.\n"
+    exit 1
+fi
+i=0
+while [[ $i -lt ${#HOSTS[*]} ]]; do
+    read PORT < <( ssh $WFBUSER readlink /run/ampi/dev/${HOSTS[$i]} )
+    if [[ $PORT =~ ^[0-9]+$ ]]; then
+	printf "Mapping port $PORT to ${HOSTS[$i]}..."
+	if ssh -f -N -L$PORT:localhost:$PORT $WFBUSER 2>&1 > /dev/null; then
+	    printf "  Okay; you can login with ssh -p $PORT -i ~/.ssh/id_ed25519_${HOSTS[$i]} pi@localhost\n"
+	else
+	    printf "  Failed!\n"
+	fi
+    else
+	printf "Weird, host ${HOSTS[$i]} doesn't seem to have a port mapped on the server.\n"
+    fi
+    i=$(( $i + 1 ))
+done
