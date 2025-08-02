@@ -118,6 +118,7 @@ function latlong_input () {
 		       if [[ ${lat%%.*} -ge -90 && ${lat%%.*} -le 90 ]]; then
 			   LATITUDE=$lat
 			   put_conf latitude $LATITUDE
+			   sw putconf lat $LATITUDE
 			   okay=1
 		       fi
 		   fi
@@ -136,6 +137,7 @@ function latlong_input () {
 		       if [[ ${lon%%.*} -ge -180 && ${lon%%.*} -le 180 ]]; then
 			   LONGITUDE=$lon
 			   put_conf longitude $LONGITUDE
+			   sw putconf long $LATITUDE
 			   okay=1
 		       fi
 		   fi
@@ -154,6 +156,7 @@ function latlong_input () {
 		       if [[ ${alt%%.*} -ge -10000 && ${alt%%.*} -le 10000 ]]; then
 			   ALTITUDE=$alt
 			   put_conf altitude $ALTITUDE
+			   sw putconf alt $ALTITUDE
 			   okay=1
 		       fi
 		   fi
