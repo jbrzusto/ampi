@@ -3,6 +3,14 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
+original
+merged
+.image
+.mounted
+*.img
+[rb]ootfs
+
+
 # Node artifact files
 node_modules/
 dist/
@@ -49,4 +57,3 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
-
