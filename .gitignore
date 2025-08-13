@@ -19,7 +19,7 @@ my_work/part_2/opt/fleetsie/ssh_config
 my_work/part_2/opt/fleetsie/sshd_config
 my_work/part_2/opt/fleetsie/custom_pre/readme.txt
 my_work/part_2/opt/fleetsie/custom_pre/packages/readme.txt
-
+zabbix-release*deb
 
 # Node artifact files
 node_modules/
