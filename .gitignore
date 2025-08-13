@@ -9,7 +9,8 @@ merged
 .mounted
 *.img
 [rb]ootfs
-
+my_work/part_1/fixup*.dat
+my_work/part_1/start*.elf
 
 # Node artifact files
 node_modules/
