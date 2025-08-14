@@ -1,0 +1,4 @@
+SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="06f3", OWNER="pi"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="06f3", OWNER="pi"
+SUBSYSTEM=="sound", KERNEL=="card*", ACTION=="add", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="06f3", RUN+="/opt/ampi/am_wrangle.sh add %n $attr{serial}"
+SUBSYSTEM=="sound", KERNEL=="card*", ACTION=="remove", RUN+="/opt/ampi/am_wrangle.sh remove %n"
