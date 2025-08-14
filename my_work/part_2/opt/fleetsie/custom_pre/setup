@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# this script sets-up ampi-specific components on a fleetsie-provisioned device
+#
+
+# we would update package lists, but fleetsie_provision has already
+# done that to grab sqlite
+
+# sudo apt update
+
+## pull in required packages
+#
+# ffmpeg: record, resample, and compress sound from a USB microphone
+#
+# flac: provides metaflac, for adding tags to flac files
+#
+# jq: for wrangling JSON objects from the command-line
+#
+# socat: for connecting sockets of various types; supports the "live
+#    listening" feature
+#
+# chrony: for high precision clock-syncing.  This might not be necessary;
+#    systemd seems to do a decent job, but chrony should allow greater
+#    precision.  [OMIT FOR NOW]
+#
+# sqlite is used, but already included by fleetsie.
+
+info "Installing packages ffmpeg, flac, jq and socat"
+sudo apt install -y ffmpeg flac jq socat
+
+info "Downloading and installing the Amazon AWS command-line \
+tools. This will take several minutes."
+
+if ! curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" ; then
+    fatal "unable to download awscli tools for linux on 64-bit raspberry pi"
+fi
+if ! unzip awscliv2.zip; then
+    fatal "unable to unzip the downloaded awscli archive"
+fi
+if ! sudo ./aws/install; then
+    fatal "error installing the aws tools"
+fi
+rm -rf awscliv2.zip aws
+
+info "Installing udev rules for audiomoth"
+
+TARG=/etc/udev/rules.d/01-audiomoth.rules
+mv 01-audiomoth.rules $TARG
+chown root:root $TARG
+chmod og-w $TARG
+
+info "Installing executable files..."
+
+for f in aarch64/* sw; do
+    TARG=/usr/bin/`basename $f`
+    mv $f $TARG
+    chown root:root $TARG
+    chmod og-w oug+x $TARG
+    info "installed `basename $f`"
+done
+
+info "Creating /opt/ampi and /data folders"
+ mkdir /opt/ampi /data
+chown pi:pi /opt/ampi /data
+
+info "Moving scripts to /opt/ampi..."
+for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu queued_uploader setpar; do
+    mv $f /opt/ampi/$f
+    chmod oug+x $f
+    chown pi:pi $f
+    chmod og-w $f
+    info "moved `basename $f`"
+done
+
+info "Setting up services for ampi-capture, bluetooth-autopair, queued-uploader, shiftwrap@, shiftwrapd"
+mv ampi-capture@.service bluetooth.service bluetooth-autopair.service queued-uploader.service shiftwrapd.service shiftwrap@.service /etc/systemd/system
+systemctl daemon-reload
+
+info "Setting up shiftwrap configuration"
+mkdir -p /etc/shiftwrap/services
+mv shiftwrap.yml /etc/shiftwrap
+mv ampi-capture@.yml /etc/shiftwrap/services
+chown -R root:root /etc/shiftwrap
+chmod -R og-w /etc/shiftwrap
+
+info "Setting up root login to run config menu if logging in over bluetooth"
+TARG=/root/.bash_login
+mv root_dot_bash_login $TARG
+chown root:root $TARG
+chmod u=rwx,og=rx $TARG
+touch /root/.hushlogin
+echo "" > /etc/motd
+echo "set +m" >> /root/.bashrc
+
+info "Setting sitename to ... unconfigured"
+echo Unconfigured > /etc/sitename
+
+info "Enabling bluetooth menu and scheduling services"
+sudo udevadm control --reload-rules
+sudo systemctl daemon-reload
+sudo systemctl enable --now shiftwrapd
+sudo systemctl enable --now bluetooth-autopair

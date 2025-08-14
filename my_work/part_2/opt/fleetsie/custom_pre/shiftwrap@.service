@@ -1,0 +1,17 @@
+[Unit]
+Description=shiftwrap templated service wrapper
+After=shiftwrapd.service
+
+[Service]
+KillSignal=SIGINT
+Type=oneshot
+RemainAfterExit=true
+ExecStartPre=/usr/bin/sw manage %i
+ExecStart=/usr/bin/true
+ExecStopPost=/usr/bin/sw unmanage %i
+Restart=no
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
