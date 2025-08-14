@@ -1,13 +1,1 @@
-[Unit]
-Description=data file uploader
-
-[Service]
-User=1000
-Group=1000
-ExecStart=/opt/ampi/queued_uploader.sh
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-[Install]
-WantedBy=multi-user.target
+my_work/part_2/opt/fleetsie/custom_pre/queued-uploader.service

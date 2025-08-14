@@ -1,0 +1,146 @@
+#!/bin/bash
+#
+# This file is sourced by other shell scripts to obtain common functions.
+
+# We use an sqlite DB to store configuration, and defines functions
+# get_conf and put_conf to manipulate it.  If the DB does not exist,
+# it is created and populated with default values, as these are
+# requested with get_conf.
+
+# location of config database
+CONFIG_DB=/opt/ampi/ampi_config.sqlite
+DEFAULTS_FILE=/opt/ampi/ampi_config.default
+
+# location of simulated device tree for audiomoths
+AM_DEV_DIR=/run/ampi
+
+# declare an array for default values,
+# but we only read it on demand when a default
+# is required
+declare -A default
+
+# run sqlite in a coprocess; return values left justified in 1 column
+coproc SQL { sqlite3 -column $CONFIG_DB 2>&1; }
+FROMSQL=${SQL[0]}
+TOSQL=${SQL[1]}
+sleep 0.1
+printf ".prompt \"\" \"\"\n" >&$TOSQL
+printf ".timeout 1000\n" >&$TOSQL
+read -t 0.1 ignore <&$FROMSQL
+read -t 0.1 ignore <&$FROMSQL
+# do_cmd runs a command in the attached sqlite database
+do_cmd() {
+    printf "%s;\n" "$1" >&$TOSQL
+}
+
+do_cmd "create table if not exists conf(key string primary key, val any)"
+
+# get_conf reads the configuration value for $2 into the var named as $1
+function get_conf() {
+    declare -n _rv=$1
+    printf "select val from conf where key=\"%s\";\n" "$2" >&$TOSQL
+    if read -t 0.1 _rv <&$FROMSQL; then
+	EC=0
+    else
+	EC=1
+    fi
+    if [[ "$_rv" == "" ]]; then
+	printf "select count(*) from conf where key=\"%s\";\n" "$2" >&$TOSQL
+	if read -t 0.1 _rvc <&$FROMSQL; then
+	    # no value defined for key (versus the key is set to "")
+	    if [[ "$_rvc" == "0" ]]; then
+		# read defaults from a file, if necessary
+		if [[ ${#default[@]} -eq 0 ]]; then
+		    . $DEFAULTS_FILE
+		fi
+		_rv=${default[$2]}
+		put_conf "$2" "$_rv"
+	    fi
+	fi
+    fi
+    return $EC
+}
+
+# put_conf sets the configuration value for $1 to be $2
+function put_conf() {
+   printf "replace into conf values(\"%s\", \"%s\");\n" "$1" "$2" >&$TOSQL
+}
+
+# when the sourcing script exits, kill the coprocess
+trap "kill $SQL_PID" EXIT
+trap "exit 1" SIGINT
+
+# set input sampling rate, gain, and other config options on audiomoth
+# given by serial number in $1.
+#
+# The settings come from these configuration items:
+#    input.sample.rate
+#    am.gain.level (1..10; translates to (0..4 + lgr, 0..4 no lgr)
+#    am.filter
+#    am.esm
+#    am.d48
+#
+# Note: we check whether the existing settings match the desired
+# config, and if so, don't do the config.  Otherwise, we end up in an
+# infinite loop of re-enumeration and reconfiguration.  The AM docs
+# claim re-enumeration only happens if the rate is changed, but that
+# isn't the case.
+
+function set_am_mode() {
+    local serial=$1
+    local input_sample_rate am_gain_level am_filter am_esm am_d48 use_lgr
+    get_conf input_sample_rate input.sample.rate
+    get_conf am_gain_level am.gain.level
+    get_conf am_filter am.filter
+    get_conf am_esm am.esm
+    get_conf am_d48 am.d48
+
+    # build the canonical setting string from desired values
+    # it's in this order:
+    # rate gain_level [filter string] [lgr] [esm] [d48]
+    local new_settings="$input_sample_rate"
+    # translate our gain levels to AM's
+    # our 1..5 map to 0..4 with lgr flag
+    # our 6..10 map to 0..4 without lgr flag
+    if [[ $am_gain_level -le 5 ]]; then
+	am_gain_level=$(( $am_gain_level - 1 ))
+	use_lgr=1
+    else
+	am_gain_level=$(( $am_gain_level - 6 ))
+    fi
+    new_settings="$new_settings gain $am_gain_level"
+    if [[ $am_filter ]]; then
+	new_settings="$new_settings $am_filter"
+    fi
+    if [[ $use_lgr ]]; then
+	new_settings="$new_settings lgr"
+    fi
+    if [[ $am_esm ]]; then
+	new_settings="$new_settings esm"
+    fi
+    if [[ $am_d48 ]]; then
+	new_settings="$new_settings d48"
+    fi
+
+    local curr_settings="`amcmd read $serial | cut  -d ' ' -f3-`"
+    if [[ "$curr_settings" != "$new_settings" ]]; then
+	printf "doing config curr: '%s'  new: '%s'\n" "$curr_settings" "$new_settings"
+	amcmd config $serial $new_settings
+	# make these settings persist on the AM.  Not required for operation
+	# here, since settings are always applied before recording starts,
+	# but probably the least-surprising behaviour in case the AM gets plugged
+	# into a different host.  Note the sleep, as a persist command too
+	# soon after a change in config doesn't work.
+	printf "waiting for re-enumeration before\nsaving persistent state\n"
+	sleep 2
+	amcmd persist $serial
+	# changed settings will cause re-enumeration of the USB device, triggering
+	# a restart of this process, so we quit now to make that clear.
+	return 1
+    fi
+    return 0
+}
+
+# audiomoth gain levels (1..10) have these gain values
+# (we automatically use the lgr flag when configuring an audiomoth to achieve any of the lowest 5 gain levels)
+declare -a AM_GAIN_VALUES=("unset" "0.33 dB" "0.55 dB" "1.00 dB" "1.67 dB" "2.20 dB" "4.33 dB" "7.00 dB" "15.00 dB" "25.05 dB" "33.00 dB")

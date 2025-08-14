@@ -1,10 +1,1 @@
-issystemd: true
-shifts:
-  overnight:
-    start: dusk-1h
-    stop: dawn-2h
-    setup: setpar recording.duration 300 recording.spacing 600
-  morning:
-    start: dawn-2h
-    stop: dawn+1h
-    setup: setpar recording.duration 300 recording.spacing 300
+my_work/part_2/opt/fleetsie/custom_pre/ampi-capture@.yml

@@ -1,6 +1,1 @@
-# run config_menu if logging in via the bluetooth console
-set +m
-if [[ `tty` == "/dev/rfcomm0" ]]; then
-    /opt/ampi/config_menu.sh
-    logout
-fi
+my_work/part_2/opt/fleetsie/custom_pre/root_dot_bash_login

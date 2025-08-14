@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# set parameter(s) in the ampi configuration database
+#
+# called as
+#
+#   ampi_set KEY1 VAL1 KEY2 VAL2 ...
+#
+# where
+#
+#    - KEYn is a value from the "key" column in the conf table of the database
+#    - VALn is the "val" value to pair with "key" in that table
+
+AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+if [[ ! -f $AM_SHARED_FILE ]]; then
+    echo "Can't find shared code file $AM_SHARED_FILE"
+    exit 100
+fi
+. $AM_SHARED_FILE
+while [[ "$1" ]]; do
+    put_conf "$1" "$2"
+    shift 2
+done

@@ -1,0 +1,11 @@
+[Unit]
+Description=automatic bluetooth pairing
+PartOf=bluetooth.target
+After=bluetooth.service
+[Service]
+SyslogIdentifier=bluetooth-autopair
+# set the working directory
+WorkingDirectory=/opt/ampi
+ExecStart=/opt/ampi/bluetooth_autopair.sh
+[Install]
+WantedBy=bluetooth.target
