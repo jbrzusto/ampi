@@ -1,4 +1,0 @@
-# maintain a tunnel to whoflewby.org
-# put this file in /etc/cron.d
-# Note: fill in ${REMOTE_TUNNEL_PORT} with the remote tunnel port assigned to this host
-* * * * * pi ssh -oExitOnForwardFailure=yes -oControlMaster=auto -oControlPath=/tmp/ssh.wfb -Rlocalhost:${REMOTE_TUNNEL_PORT}:localhost:22 -L10051:localhost:10051 ampi@wfb
