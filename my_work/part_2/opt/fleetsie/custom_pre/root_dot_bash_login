@@ -1,6 +1,6 @@
 # run config_menu if logging in via the bluetooth console
 set +m
 if [[ `tty` == "/dev/rfcomm0" ]]; then
-    /opt/ampi/config_menu.sh
+    /opt/ampi/config_menu
     logout
 fi

@@ -4,7 +4,7 @@
 # the files come from a folder and have names encoded as path names,
 # with '@' as the path separator.
 
-AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+AM_SHARED_FILE=/opt/ampi/ampi_common
 if [[ ! -f $AM_SHARED_FILE ]]; then
     echo "Can't find shared code file $AM_SHARED_FILE"
     exit 100

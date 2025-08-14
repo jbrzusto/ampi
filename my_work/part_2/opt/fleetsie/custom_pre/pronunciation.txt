@@ -1,0 +1,28 @@
+\.ssh
+dot-ess-ess-aitch
+ssh
+ ess-ess-aitch
+sshing
+ ess-ess-aitching
+nmcli
+ en-em-clye
+login
+ loggin
+otp
+ owe-tee-pee
+hostname
+host-name
+whoflewby.org
+ who-flew-by-dot-org
+whoflewby
+ who-flew-by
+\.org
+ dot-org
+2\.4g
+ two point four jee
+5g
+ five jee
+sqlite
+ ess-queue-lite
+tmp
+ temp

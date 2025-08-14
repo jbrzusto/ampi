@@ -4,7 +4,7 @@ Description=data file uploader
 [Service]
 User=1000
 Group=1000
-ExecStart=/opt/ampi/queued_uploader.sh
+ExecStart=/opt/ampi/queued_uploader
 Restart=always
 RestartSec=10
 StandardOutput=journal

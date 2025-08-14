@@ -4,7 +4,7 @@
 #
 # called as
 #
-#   ampi_capture.sh DEVNO-SERIAL
+#   ampi_capture DEVNO-SERIAL
 #
 # where
 #
@@ -16,7 +16,7 @@
 #
 #    - SERIAL is a 16-digit hex serial number for the audiomoth
 
-AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+AM_SHARED_FILE=/opt/ampi/ampi_common
 if [[ ! -f $AM_SHARED_FILE ]]; then
     echo "Can't find shared code file $AM_SHARED_FILE"
     exit 100

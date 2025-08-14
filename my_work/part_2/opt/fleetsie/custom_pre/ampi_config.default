@@ -1,5 +1,5 @@
 # This is a file of default values for configuration
-# items, sourced by the ampi_config.sh script.
+# items, sourced by the ampi_config script.
 #
 # The values defined here are only used if the sqlite
 # configuration DB doesn't have a value for a key defined

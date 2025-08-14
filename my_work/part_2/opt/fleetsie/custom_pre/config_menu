@@ -6,7 +6,7 @@ if [[ "`tty`" != "/dev/rfcomm0" && $1 != "--force" ]]; then
     exit
 fi
 
-AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+AM_SHARED_FILE=/opt/ampi/ampi_common
 if [[ ! -f $AM_SHARED_FILE ]]; then
     echo "Can't find shared code file $AM_SHARED_FILE"
     exit 100

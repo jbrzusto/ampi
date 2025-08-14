@@ -27,7 +27,7 @@
   DEVNO=$2
   SERIAL=${3//*_/}
 
-  AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+  AM_SHARED_FILE=/opt/ampi/ampi_common
   if [[ ! -f $AM_SHARED_FILE ]]; then
       echo "Can't find shared code file $AM_SHARED_FILE" 1>&2
       exit 100

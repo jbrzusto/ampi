@@ -11,7 +11,7 @@
 #    - KEYn is a value from the "key" column in the conf table of the database
 #    - VALn is the "val" value to pair with "key" in that table
 
-AM_SHARED_FILE=/opt/ampi/ampi_common.sh
+AM_SHARED_FILE=/opt/ampi/ampi_common
 if [[ ! -f $AM_SHARED_FILE ]]; then
     echo "Can't find shared code file $AM_SHARED_FILE"
     exit 100

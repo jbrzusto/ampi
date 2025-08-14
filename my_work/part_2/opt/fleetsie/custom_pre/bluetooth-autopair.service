@@ -6,6 +6,6 @@ After=bluetooth.service
 SyslogIdentifier=bluetooth-autopair
 # set the working directory
 WorkingDirectory=/opt/ampi
-ExecStart=/opt/ampi/bluetooth_autopair.sh
+ExecStart=/opt/ampi/bluetooth_autopair
 [Install]
 WantedBy=bluetooth.target

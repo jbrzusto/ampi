@@ -7,12 +7,12 @@ Group=1000
 KillSignal=SIGINT
 # set the working directory
 WorkingDirectory=/opt/ampi
-ExecStart=/opt/ampi/ampi_capture.sh %i
+ExecStart=/opt/ampi/ampi_capture %i
 Restart=always
 RestartSec=10
 ## setup and takedown scripts are run as root (+), and exit code is ignored(-):
-ExecStartPre=+-/opt/ampi/exec_start_pre_ampi_capture.sh
-ExecStopPost=+-/opt/ampi/exec_stop_post_ampi_capture.sh
+ExecStartPre=+-/opt/ampi/exec_start_pre_ampi_capture
+ExecStopPost=+-/opt/ampi/exec_stop_post_ampi_capture
 StandardOutput=journal
 StandardError=journal
 [Install]
