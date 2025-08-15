@@ -6,7 +6,7 @@
 # we would update package lists, but fleetsie_provision has already
 # done that to grab sqlite
 
-# sudo apt update
+# apt update
 
 ## pull in required packages
 #
@@ -44,7 +44,7 @@ if ! f_exists fatal; then
 fi
 
 info "Installing packages ffmpeg, flac, jq and socat"
-sudo apt install -y ffmpeg flac jq socat
+apt install -y ffmpeg flac jq socat
 
 info "Downloading and installing the Amazon AWS command-line \
 tools. This will take several minutes."
@@ -55,7 +55,7 @@ fi
 if ! unzip awscliv2.zip; then
     fatal "unable to unzip the downloaded awscli archive"
 fi
-if ! sudo ./aws/install; then
+if ! ./aws/install; then
     fatal "error installing the aws tools"
 fi
 rm -rf awscliv2.zip aws
@@ -126,7 +126,7 @@ info "Setting sitename to ... unconfigured"
 echo Unconfigured > /etc/sitename
 
 info "Enabling bluetooth menu and scheduling services"
-sudo udevadm control --reload-rules
-sudo systemctl daemon-reload
-sudo systemctl enable --now shiftwrapd
-sudo systemctl enable --now bluetooth-autopair
+udevadm control --reload-rules
+systemctl daemon-reload
+systemctl enable --now shiftwrapd
+systemctl enable --now bluetooth-autopair
