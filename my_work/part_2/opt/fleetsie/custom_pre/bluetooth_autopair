@@ -33,6 +33,7 @@ while true; do
                 fi
 	        sleep 1
             done
+	    killall -KILL rfcomm
             rfcomm watch hci0 1 agetty -c -i -I "\\12\\12Login as root with the usual password\\12" rfcomm0 &
         fi
     fi
