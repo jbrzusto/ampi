@@ -16,6 +16,7 @@ where a machine-learning pipeline extracts bird night-flight calls.
 - **[ampi](https://github.com/jbrzusto/ampi)**: in-field configuration via bluetooth, live listening, superglue
 - **[fleetsie](https://github.com/jbrzusto/fleetsie)**: provisioning a fleet of devices
 - **[zabbix](https://zabbix.com)**: fleet monitoring
+- **[sqlite](https://sqlite.org)**: device config storage (on device); fleet config storage (on server)
 
 ## ampi-specific files
 
