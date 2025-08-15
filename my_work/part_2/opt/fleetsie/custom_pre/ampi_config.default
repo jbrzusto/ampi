@@ -77,6 +77,3 @@ default[audio.stream.base.port]=12344
 # when requested from the bluetooth menu.  To reduce power consumption,
 # we don't want to do this indefinitely.
 default[listen.live.duration]=600
-
-# username and host to connect to (credentials for these must be configured in ~pi/.ssh/config)
-default[user.at.host]="ampi@wfb"
