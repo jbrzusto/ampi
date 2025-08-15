@@ -51,11 +51,11 @@ chmod og-w $TARG
 
 info "Installing executable files..."
 
-for f in aarch64/* sw; do
+for f in aarch64bin/* sw; do
     TARG=/usr/bin/`basename $f`
     mv $f $TARG
     chown root:root $TARG
-    chmod og-w oug+x $TARG
+    chmod og-w,oug+x $TARG
     info "installed `basename $f`"
 done
 
