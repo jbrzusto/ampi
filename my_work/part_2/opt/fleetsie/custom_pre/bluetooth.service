@@ -8,7 +8,6 @@ PartOf=bluetooth.target
 Type=dbus
 BusName=org.bluez
 ExecStart=/usr/sbin/bluetoothd -C
-ExecStartPost=/usr/bin/sdptool add SP
 NotifyAccess=main
 #WatchdogSec=10
 Restart=on-failure
