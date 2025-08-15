@@ -21,3 +21,9 @@ where a machine-learning pipeline extracts bird night-flight calls.
 
 These are saved within the fleetsie framework, in `my_work/part_2/opt/fleetsie/custom_pre`,
 but symlinks from the top of this repo are included for convenience.
+
+## Setup
+
+There is a google doc [here](https://docs.google.com/document/d/1UtJ0agmBAgIvWY2mq4LzUb58KXhgKbQIww2vrpotEVg/edit?usp=sharing) that explains how to set up and configure an ampi device.
+
+There is another google doc [here](https://docs.google.com/document/d/1CATk1b4eQz6Xu30ksj6AOIfCjCyrqR6IeCPLyRx5c3Y/edit?usp=sharing) which describes the device provisioning process in more detail.
