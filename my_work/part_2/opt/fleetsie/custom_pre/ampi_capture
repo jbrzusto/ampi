@@ -12,8 +12,6 @@
 #    enumeration order; this number is needed for referring to the
 #    audiomoth in the ALSA framework (e.g. "hw:CARD=2,DEV=0" for DEVNO=2)
 #
-#    - RRRR is the zero-padded sampling rate, in kHz; e.g. 0032
-#
 #    - SERIAL is a 16-digit hex serial number for the audiomoth
 
 AM_SHARED_FILE=/opt/ampi/ampi_common
