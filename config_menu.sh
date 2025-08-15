@@ -1,1 +1,0 @@
-my_work/part_2/opt/fleetsie/custom_pre/config_menu.sh

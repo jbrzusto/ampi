@@ -1,1 +1,0 @@
-my_work/part_2/opt/fleetsie/custom_pre/ampi_capture.sh
