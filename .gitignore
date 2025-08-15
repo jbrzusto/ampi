@@ -20,6 +20,18 @@ my_work/part_2/opt/fleetsie/sshd_config
 my_work/part_2/opt/fleetsie/custom_pre/readme.txt
 my_work/part_2/opt/fleetsie/custom_pre/packages/readme.txt
 zabbix-release*deb
+2025-05-13-raspios-bookworm-arm64-lite_fleetsie.img.xz
+ampi_files_for_usb_disk.zip
+my_work/.#README.md
+my_work/part_2/opt/fleetsie/custom_pre/cleanup
+my_work/part_2/opt/fleetsie/custom_pre/packages/libttspico-data_1.0+git20130326-13_all.deb
+my_work/part_2/opt/fleetsie/custom_pre/packages/libttspico-utils_1.0+git20130326-13_arm64.deb
+my_work/part_2/opt/fleetsie/custom_pre/packages/libttspico0_1.0+git20130326-13_arm64.deb
+my_work/part_2/opt/fleetsie/ssh-tunnel.service
+my_work/part_2/opt/fleetsie/ssh_tunnel
+my_work/part_2/opt/fleetsie/zabbix_agent2.conf
+my_work/part_2/opt/fleetsie/zabbix_sender.conf
+.#*
 
 # Node artifact files
 node_modules/
