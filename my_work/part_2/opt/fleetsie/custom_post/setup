@@ -25,6 +25,24 @@
 #
 # sqlite is used, but already included by fleetsie.
 
+# f_exists checks whether the function named in $1 has been defined
+function f_exists() {
+    declare -F "$1" > /dev/null
+}
+
+if ! f_exists info; then
+    function info() {
+	printf "$*\n"
+    }
+fi
+
+if ! f_exists fatal; then
+    function fatal() {
+	printf "ERROR: $*\n"
+	exit 1
+    }
+fi
+
 info "Installing packages ffmpeg, flac, jq and socat"
 sudo apt install -y ffmpeg flac jq socat
 
@@ -72,8 +90,20 @@ for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu queu
     info "moved `basename $f`"
 done
 
+info "Moving default ampi config to /opt/ampi"
+f=ampi_config.default
+TARG=/opt/ampi/$f
+mv $f $TARG
+chown pi:pi $TARG
+
+f=ampi_config.sqlite
+TARG=/opt/ampi/$f
+mv $f $TARG
+chown pi:pi $TARG
+
 info "Setting up services for ampi-capture, bluetooth-autopair, queued-uploader, shiftwrap@, shiftwrapd"
 mv ampi-capture@.service bluetooth.service bluetooth-autopair.service queued-uploader.service shiftwrapd.service shiftwrap@.service /etc/systemd/system
+chown root:root /etc/systemd/system/*
 systemctl daemon-reload
 
 info "Setting up shiftwrap configuration"
