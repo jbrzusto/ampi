@@ -43,22 +43,25 @@ if ! f_exists fatal; then
     }
 fi
 
-info "Installing packages ffmpeg, flac, jq and socat"
-apt install -y ffmpeg flac jq socat
+if ! which ffmpeg || ! which flac || ! which jq || ! which socat ; then
+    info "Installing packages ffmpeg, flac, jq and socat"
+    apt install -y ffmpeg flac jq socat
+fi
 
-info "Downloading and installing the Amazon AWS command-line \
+if ! which aws; then
+    info "Downloading and installing the Amazon AWS command-line \
 tools. This will take several minutes."
-
-if ! curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" ; then
-    fatal "unable to download awscli tools for linux on 64-bit raspberry pi"
+    if ! curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" ; then
+	fatal "unable to download awscli tools for linux on 64-bit raspberry pi"
+    fi
+    if ! unzip awscliv2.zip; then
+	fatal "unable to unzip the downloaded awscli archive"
+    fi
+    if ! ./aws/install; then
+	fatal "error installing the aws tools"
+    fi
+    rm -rf awscliv2.zip aws
 fi
-if ! unzip awscliv2.zip; then
-    fatal "unable to unzip the downloaded awscli archive"
-fi
-if ! ./aws/install; then
-    fatal "error installing the aws tools"
-fi
-rm -rf awscliv2.zip aws
 
 info "Installing udev rules for audiomoth"
 
