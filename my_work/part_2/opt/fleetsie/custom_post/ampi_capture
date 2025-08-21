@@ -51,7 +51,8 @@ record_audio() {
     ln -s -f $(( $ts + $RECORDING_DURATION )) $DEVICE_DIR/until
     ffmpeg -loglevel error -t $RECORDING_DURATION -f alsa -channels 1 -i hw:$DEVICE_NUM -ar $OUTPUT_SAMPLE_RATE -filter_complex "asplit=2[c1][c2]" -map "[c1]" "${wipo_file}" -map "[c2]" -f s16le -ar 22050 -acodec pcm_s16le -flush_packets 1 -reuse 1 -connect 0 udp://127.0.0.1:$AUDIO_STREAM_PORT
     rc=$?
-    if [[ $rc == 0 || $rc == 255 ]]; then
+    echo ffmpeg returned and rc="$rc" and INTERRUPTED=$INTERRUPTED
+    if [[ $rc == 0 || $rc == 255 || $INTERRUPTED ]]; then
 	# add seek points and metadata
 	metaflac --remove-all-tags \
 		 --preserve-modtime \
@@ -64,6 +65,9 @@ record_audio() {
 	echo finished recording "${output_file}"
 	# drop the leading underscore so that the uploader knows this file is complete
 	mv "${wipo_file}" "${output_file}"
+        if [[ $INTERRUPTED ]]; then
+           rc=255
+        fi
     else
 	echo error trying to record "${output_file}"
     fi

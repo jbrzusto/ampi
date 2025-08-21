@@ -68,7 +68,7 @@ function put_conf() {
 
 # when the sourcing script exits, kill the coprocess
 trap "kill $SQL_PID" EXIT
-trap "exit 1" SIGINT
+trap "INTERRUPTED=1; echo set interrupted to 1" SIGINT
 
 # set input sampling rate, gain, and other config options on audiomoth
 # given by serial number in $1.
