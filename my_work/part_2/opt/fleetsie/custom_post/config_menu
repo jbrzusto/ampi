@@ -860,34 +860,38 @@ function run_shell () {
 
 function start_recording () {
     if ! pushd /run/ampi; then
-	echo "No audiomoths attached."
-	return
+       echo No audiomoths found.
+       return
     fi
     for f in `ls -1`; do
 	if [[ -L $f ]]; then
 	    AM=`readlink $f`
 	    systemctl restart ampi-capture@${f}-$AM
 	    echo started recording on AM-$AM with duration `sqlite3 /opt/ampi/ampi_config.sqlite "select val from conf where key='recording.duration'"` s
+            popd
 	    return
 	fi
     done
-    echo "Weird - audiomoths suddenly detached?"
+    popd
+    echo "No audiomoths detected"
 }
 
 function stop_recording () {
     if ! pushd /run/ampi; then
-	echo "No audiomoths attached."
-	return
+       echo No audiomoths found.
+       return
     fi
     for f in `ls -1`; do
 	if [[ -L $f ]]; then
 	    AM=`readlink $f`
 	    systemctl stop ampi-capture@${f}-$AM
 	    echo stopped recording on AM-$AM
+            popd
 	    return
 	fi
     done
-    echo "Weird - audiomoths suddenly detached?"
+    echo "No audiomoths detected"
+    popd
 }
 
 # don't spew errors on pipes breaking when e.g. a listening process is killed
