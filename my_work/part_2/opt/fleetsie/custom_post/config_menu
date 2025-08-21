@@ -1,5 +1,7 @@
 #!/bin/bash
 
+USER1000=`id -nu 1000`
+
 # run menu only if connect via bluetooth or called with "--force"
 if [[ "`tty`" != "/dev/rfcomm0" && $1 != "--force" ]]; then
     bash -l
@@ -810,7 +812,7 @@ function enter_new_credentials () {
 	for cci in "${cc[@]}"; do
 	    printf "   %s\n" "$cci" >> $NEW_SECRETS_FILE
 	done
-	chown pi:pi $NEW_SECRETS_FILE
+	chown ${USER1000}:${USER1000} $NEW_SECRETS_FILE
 	ln -s -f $NEW_SECRETS_BASENAME $SECRETS_FILE
 	printf "New cloud credentials saved.\nDo you want to restart the uploader (y/N)? "
 	read REPLY
@@ -823,7 +825,7 @@ function enter_new_credentials () {
 }
 
 UPDATE_URL=https://whoflewby.org/ampi_update.tar.xz
-UPDATE_TARGET=/home/pi/update.tar.xz
+UPDATE_TARGET=/home//update.tar.xz
 
 function remote_update () {
     printf "\n\nThis will fetch the update at\n$UPDATE_URL\ninstall it, then reboot.\n\nProceed (y/N)? "
@@ -856,12 +858,44 @@ function run_shell () {
     bash -m
 }
 
+function start_recording () {
+    if ! pushd /run/ampi; then
+	echo "No audiomoths attached."
+	return
+    fi
+    for f in `ls -1`; do
+	if [[ -L $f ]]; then
+	    AM=`readlink $f`
+	    systemctl restart ampi-capture@${f}-$AM
+	    echo started recording on AM-$AM with duration `sqlite3 /opt/ampi/ampi_config.sqlite "select val from conf where key='recording.duration'"` s
+	    return
+	fi
+    done
+    echo "Weird - audiomoths suddenly detached?"
+}
+
+function stop_recording () {
+    if ! pushd /run/ampi; then
+	echo "No audiomoths attached."
+	return
+    fi
+    for f in `ls -1`; do
+	if [[ -L $f ]]; then
+	    AM=`readlink $f`
+	    systemctl stop ampi-capture@${f}-$AM
+	    echo stopped recording on AM-$AM
+	    return
+	fi
+    done
+    echo "Weird - audiomoths suddenly detached?"
+}
+
 # don't spew errors on pipes breaking when e.g. a listening process is killed
 trap '' PIPE
 
 title="--- Configuration Menu for Device `hostname` ---"
 prompt="Pick an item (or 0 to exit):"
-options=("Site Info" "WiFi" "Audio" "Storage and Upload" "Update and Reboot" "Enter linux shell")
+options=("Site Info" "WiFi" "Audio" "Storage and Upload" "Update and Reboot" "Enter linux shell" "Start recording" "Stop recording")
 
 while true; do
     echo -e "$title\n$prompt "
@@ -881,6 +915,10 @@ while true; do
 	5) remote_update
 	   ;;
         6) run_shell
+	   ;;
+	7) start_recording
+	   ;;
+	8) stop_recording
 	   ;;
     esac
     if [[ "$QUIT" == 1 ]]; then
