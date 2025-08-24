@@ -211,7 +211,7 @@ function my_select () {
 	if [[ "$allow_empty" != "" && "$REPLY" == "" ]]; then
 	    return
 	fi
-	if [[ "$REPLY" =~ ^[0-9]+$ && ($REPLY -ge 0 || $REPLY -le ${#@}) ]]; then
+	if [[ "$REPLY" =~ ^[0-9]+$ && $REPLY -ge 0 && $REPLY -le ${#@} ]]; then
 	    CHOICE="${choices[$(( $REPLY - 1 ))]}"
 	    return
 	fi
