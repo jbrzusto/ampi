@@ -136,6 +136,7 @@ udevadm control --reload-rules
 systemctl daemon-reload
 systemctl enable --now shiftwrapd
 systemctl enable --now bluetooth-autopair
+systemctl enable --now queued-uploader
 systemctl enable leds-off
 # not sure where this is happening, but something is clobbering the suid bit on sudo
 chmod u+s /bin/sudo
