@@ -43,6 +43,8 @@ if ! f_exists fatal; then
     }
 fi
 
+USER1000=`id -nu 1000`
+
 if ! which ffmpeg || ! which flac || ! which jq || ! which socat ; then
     info "Installing packages ffmpeg, flac, jq and socat"
     apt install -y ffmpeg flac jq socat
@@ -81,8 +83,8 @@ for f in aarch64bin/* sw; do
 done
 
 info "Creating /opt/ampi and /data folders"
- mkdir /opt/ampi /data
-chown pi:pi /opt/ampi /data
+mkdir -p /opt/ampi /data
+chown ${USER1000}:${USER1000} /opt/ampi /data
 
 info "Moving scripts to /opt/ampi..."
 for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu leds_off queued_uploader setpar; do
@@ -97,12 +99,12 @@ info "Moving default ampi config to /opt/ampi"
 f=ampi_config.default
 TARG=/opt/ampi/$f
 mv $f $TARG
-chown pi:pi $TARG
+chown ${USER1000}:${USER1000} $TARG
 
 f=ampi_config.sqlite
 TARG=/opt/ampi/$f
 mv $f $TARG
-chown pi:pi $TARG
+chown ${USER1000}:${USER1000} $TARG
 
 info "Setting up services for ampi-capture, bluetooth-autopair, queued-uploader, shiftwrap@, shiftwrapd"
 mv ampi-capture@.service bluetooth.service bluetooth-autopair.service leds-off.service queued-uploader.service shiftwrapd.service shiftwrap@.service /etc/systemd/system
