@@ -4,8 +4,25 @@
 #
 # This script doesn't cover the entire API, just some of the most common uses.
 
-## server config
-SERVER=http://localhost:$((0x7ac0))
+## server config - and wait until server is ready
+
+SERVER_PORT_SYMLINK=/tmp/shiftwrapd.port
+SERVER_WAIT_TIME=30
+i=0
+while true; do
+    if [[ -L $SERVER_PORT_SYMLINK ]]; then
+	break
+    fi
+    if [[ $i == SERVER_WAIT_TIME ]]; then
+	echo "server isn't running - waited for $SERVER_WAIT_TIME seconds"
+	exit 1
+    fi
+    i=$(( $i + 1 ))
+    sleep 1
+done
+
+SOCKPATH=`readlink $SERVER_PORT_SYMLINK`
+SERVER="--unix-socket $SOCKPATH http://localhost"
 FETCH="/usr/bin/curl --silent"
 
 ## pretty-printer for responses from shiftwrapd HTTP server
@@ -29,6 +46,17 @@ function get () {
 function config () {
     get config | $PP
 }
+
+# set (some) global config items
+function set_conf () {
+    case $1 in
+	lat) put config '{"Observer":{"Latitude":'$2'}}' ;;
+	long) put config '{"Observer":{"Longitude":'$2'}}' ;;
+	alt) put config  '{"Observer":{"Altitude":'$2'}}' ;;
+	minruntime) put config '{"DefaultMinRuntime":"'$2'"}' ;;
+    esac
+}
+
 
 # show time on shiftwrapd clock
 function get_time () {
@@ -113,6 +141,19 @@ config
 
    - prints the global shiftwrap configuration
 
+setconf KEY VALUE
+
+   - sets one of the global shiftwrap options.  KEY VALUE can be:
+
+     - lat LATITUDE : sets the latitude of the station to LATITUDE decimal degrees (positive is North)
+
+     - long LONGITUDE : sets the longitude of the station to LONGITUDE decimal degrees (positive is West)
+
+	 - alt ALTITUDE : sets the altitude of the station to ALTITUDE metres ASL
+
+     - minruntime DURATION : sets the default minmum runtime for any Service that doesn't specify this.
+        DURATION is parsed like a Go time.Duration; e.g. "15m", "1.5h", "30s"
+
 time
 
    - prints the current time according to the shiftwrapd clock,
@@ -187,6 +228,7 @@ shift
 
 case $ACTION in
     config ) config ;;
+    setconf ) set_conf $1 $2 ;;
     "time" ) get_time ;;
     manage ) manage_service $1 $2 ;;
     unmanage ) unmanage_service $1 $2 ;;
