@@ -88,10 +88,11 @@ chown ${USER1000}:${USER1000} /opt/ampi /data
 
 info "Moving scripts to /opt/ampi..."
 for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu leds_off queued_uploader setpar; do
-    mv $f /opt/ampi/$f
-    chmod oug+x $f
-    chown pi:pi $f
-    chmod og-w $f
+    TARG=/opt/ampi/$f
+    mv $f $TARG
+    chmod oug+x $TARG
+    chown ${USER1000}:${USER1000} $TARG
+    chmod og-w $TARG
     info "moved `basename $f`"
 done
 
