@@ -18,7 +18,7 @@ fi
 function site_menu () {
     while true; do
 	local prompt="\nPick an item number, or 0 to exit this menu:"
-	local options=("Site Name" "Lat/Long/Alt" "Host Name")
+	local options=("Site Name" "Lat/Long/Alt")
 	local quit=""
 	echo -e "$prompt "
 	my_select "${options[@]}"
@@ -28,8 +28,6 @@ function site_menu () {
 	    1) sitename_select
 	       ;;
 	    2) latlong_input
-	       ;;
-	    3) set_hostname
 	       ;;
         esac
 	if [[ "$quit" == 1 ]]; then
@@ -65,31 +63,6 @@ function sitename_select () {
 function new_sitename () {
     echo $1 > "$SITENAME_FILE"
     restart_capture
-}
-
-function set_hostname () {
-    printf "\nHost Name\n\n"
-    printf "Current host: %s\n\n" `hostname`
-    while true; do
-	printf "Setting a new hostname will reboot the AMPi.\nEnter new host name: (or empty line to cancel) \n"
-	read HOST
-	if [[ ! $HOST =~ [[:space:]] ]]; then
-	    break
-	fi
-	printf "\nHost name must not contain spaces - try again.\n"
-    done
-    if [[ "$HOST" == "" ]]; then
-	echo "Host name change cancelled."
-	return
-    fi
-    new_hostname $HOST
-}
-
-function new_hostname () {
-    echo $1 > "/etc/hostname"
-    printf "\nRebooting now...\n\n\n"
-    sleep 1
-    reboot
 }
 
 function latlong_input () {
