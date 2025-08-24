@@ -85,7 +85,7 @@ info "Creating /opt/ampi and /data folders"
 chown pi:pi /opt/ampi /data
 
 info "Moving scripts to /opt/ampi..."
-for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu queued_uploader setpar; do
+for f in ampi_capture ampi_common am_wrangle bluetooth_autopair config_menu leds_off queued_uploader setpar; do
     mv $f /opt/ampi/$f
     chmod oug+x $f
     chown pi:pi $f
@@ -105,7 +105,7 @@ mv $f $TARG
 chown pi:pi $TARG
 
 info "Setting up services for ampi-capture, bluetooth-autopair, queued-uploader, shiftwrap@, shiftwrapd"
-mv ampi-capture@.service bluetooth.service bluetooth-autopair.service queued-uploader.service shiftwrapd.service shiftwrap@.service /etc/systemd/system
+mv ampi-capture@.service bluetooth.service bluetooth-autopair.service leds-off.service queued-uploader.service shiftwrapd.service shiftwrap@.service /etc/systemd/system
 chown root:root /etc/systemd/system/*
 systemctl daemon-reload
 
@@ -133,6 +133,23 @@ udevadm control --reload-rules
 systemctl daemon-reload
 systemctl enable --now shiftwrapd
 systemctl enable --now bluetooth-autopair
-
+systemctl enable leds-off
 # not sure where this is happening, but something is clobbering the suid bit on sudo
 chmod u+s /bin/sudo
+
+info "Disabling LEDs for ethernet and at boot time"
+
+FILE=/boot/firmware/config.txt
+echo "[all]" >> $FILE
+for line in \
+    dtparam=eth_led0=14 \
+	dtparam=eth_led1=14 \
+	dtparam=pwr_led_trigger=none \
+	dtparam=act_led_trigger=none \
+    ; do
+    pfx=${line%=*}
+    # remove existing setting
+    sed -i -e "/^$pfx/d" $FILE
+    # append new setting
+    echo $line >> $FILE
+done

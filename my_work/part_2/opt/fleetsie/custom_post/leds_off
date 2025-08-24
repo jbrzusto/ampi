@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# turn off leds on RPi
+# There is some process or service on Raspbian 12.10 that
+# re-lights the PWR LED, so this repeats the LED turn-off code
+# 10 times, waiting 10 seconds after each iteration.  This seems
+# to be enough to catch the last mysterious re-enable.
+
+cd /sys/class/leds
+for i in `seq 1 10`; do
+    for x in *; do
+	echo none > $x/trigger
+	echo 0 > $x/brightness
+    done
+    sleep 10
+done

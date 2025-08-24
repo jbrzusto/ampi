@@ -1,0 +1,7 @@
+[Unit]
+Description=turn off Pi leds completely
+[Service]
+Type=oneshot
+ExecStart=/opt/ampi/leds_off
+[Install]
+WantedBy=multi-user.target
