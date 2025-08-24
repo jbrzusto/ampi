@@ -18,7 +18,7 @@ fi
 function site_menu () {
     while true; do
 	local prompt="\nPick an item number, or 0 to exit this menu:"
-	local options=("Site Name" "Lat/Long/Alt")
+	local options=("Site Name" "Lat/Long/Alt" "Timezone")
 	local quit=""
 	echo -e "$prompt "
 	my_select "${options[@]}"
@@ -28,6 +28,8 @@ function site_menu () {
 	    1) sitename_select
 	       ;;
 	    2) latlong_input
+	       ;;
+	    3) set_timezone
 	       ;;
         esac
 	if [[ "$quit" == 1 ]]; then
@@ -145,6 +147,34 @@ function latlong_input () {
             break
 	fi
     done
+}
+
+# let user set timezone
+function set_timezone () {
+    if [[ -L /etc/timezone ]]; then
+	printf "Current timezone: %s\n" "`readlink /etc/timezone | sed -e 's/\/usr\/share\/zoneinfo\///'`"
+    else
+	printf "Current timezone: %s\n" "`cat /etc/timezone`"
+    fi
+    printf "Current localtime: %s\n" "`date`"
+    printf "After you choose a new local timezone,\ndevice will reboot.\nAre you sure (y/N)? "
+    read RESP
+    if [[ "$RESP" != "y" && "$RESP" != "Y" ]]; then
+	printf "Timezone selection cancelled.\n"
+	return
+    fi
+    echo
+    DST=/tmp/newtz.txt
+    tzselect > $DST
+    if [[ -f $DST ]]; then
+	rm /etc/timezone # in case it's a symlink
+	cat $DST > /etc/timezone
+	ln -s -f /usr/share/zoneinfo/`cat $DST` /etc/localtime
+	printf "Timezone set to %s\nRebooting now..." `cat $DST`
+	sleep 2 && reboot
+    else
+	printf "Failed to set timezone\n"
+    fi
 }
 
 # restart capture on all audiomoths
