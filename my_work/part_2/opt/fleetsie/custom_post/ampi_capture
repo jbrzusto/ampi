@@ -109,8 +109,7 @@ DEVICE_SERIAL=${1//*-/}
 DEVICE_NAME="hw:CARD=$DEVICE_NUM,DEV=0"
 DEVICE_DIR=$AM_DEV_DIR/$DEVICE_SERIAL
 AUDIO_STREAM_PORT=$(( $AUDIO_STREAM_BASE_PORT + $DEVICE_NUM ))
-PI_SERNO=`cat /proc/cpuinfo | grep ^[[:space:]]*Serial`
-PI_SERNO=${PI_SERNO/*: /}
+PI_SERNO=`cat /sys/class/net/eth0/address`
 
 # switch to data file dir
 if ! cd "${DATA_DIR}"; then
