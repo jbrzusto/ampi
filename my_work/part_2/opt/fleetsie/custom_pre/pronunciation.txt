@@ -26,3 +26,7 @@ sqlite
  ess-queue-lite
 tmp
  temp
+ aws
+A, W, S
+ AWS
+A, W, S
