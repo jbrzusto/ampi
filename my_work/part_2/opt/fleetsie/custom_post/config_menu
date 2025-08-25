@@ -115,7 +115,7 @@ function latlong_input () {
 		   if [[ $lon =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
 		       if [[ ${lon%%.*} -ge -180 && ${lon%%.*} -le 180 ]]; then
 			   LONGITUDE=$lon
-			   sw setconf long $LATITUDE
+			   sw setconf long $LONGITUDE
 			   okay=1
 		       fi
 		   fi
@@ -861,8 +861,18 @@ function run_shell () {
     bash -m
 }
 
+# qpushd is a quiet pushd
+function qpushd () {
+    pushd "$*" > /dev/null
+}
+
+# qpopd is a quiet popd
+function qpopd () {
+    popd > /dev/null
+}
+
 function start_recording () {
-    if ! pushd /run/ampi; then
+    if ! qpushd /run/ampi; then
        echo No audiomoths found.
        return
     fi
@@ -871,16 +881,16 @@ function start_recording () {
 	    AM=`readlink $f`
 	    systemctl restart ampi-capture@${f}-$AM
 	    echo started recording on AM-$AM with duration `sqlite3 /opt/ampi/ampi_config.sqlite "select val from conf where key='recording.duration'"` s
-            popd
+            qpopd
 	    return
 	fi
     done
-    popd
+    qpopd
     echo "No audiomoths detected"
 }
 
 function stop_recording () {
-    if ! pushd /run/ampi; then
+    if ! qpushd /run/ampi; then
        echo No audiomoths found.
        return
     fi
@@ -889,12 +899,12 @@ function stop_recording () {
 	    AM=`readlink $f`
 	    systemctl stop ampi-capture@${f}-$AM
 	    echo stopped recording on AM-$AM
-            popd
+            qpopd
 	    return
 	fi
     done
     echo "No audiomoths detected"
-    popd
+    qpopd
 }
 
 # don't spew errors on pipes breaking when e.g. a listening process is killed
