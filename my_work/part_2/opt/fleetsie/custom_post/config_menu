@@ -863,12 +863,12 @@ function run_shell () {
 
 # qpushd is a quiet pushd
 function qpushd () {
-    pushd "$*" > /dev/null
+    pushd "$*" > /dev/null 2>&1
 }
 
 # qpopd is a quiet popd
 function qpopd () {
-    popd > /dev/null
+    popd > /dev/null 2>&1
 }
 
 function start_recording () {
