@@ -28,3 +28,26 @@ but symlinks from the top of this repo are included for convenience.
 There is a google doc [here](https://docs.google.com/document/d/1UtJ0agmBAgIvWY2mq4LzUb58KXhgKbQIww2vrpotEVg/edit?usp=sharing) that explains how to set up and configure an ampi device.
 
 There is another google doc [here](https://docs.google.com/document/d/1CATk1b4eQz6Xu30ksj6AOIfCjCyrqR6IeCPLyRx5c3Y/edit?usp=sharing) which describes the device provisioning process in more detail.
+
+### Server setup
+
+You will need to clone `https://github.com/jbrzusto/fleetsie`
+For this doc, we'll assume that `fleetsie` and `ampi` have been cloned into sibling directories (i.e. both directories
+are in the same parent directory).
+
+Run this command:
+```sh
+cd PATH_TO_AMPI
+../fleetsie/fleetsie_srv USER@SERVER
+../fleetsie/fleetsie_gen FLEET_NAME SERVER 100 sda1
+ssh USER@SERVER
+# remaining commands are run on the server
+# fill in amazon credetentials in these commands before running them
+cat > /tmp/awscreds.txt <<EOF
+mycreds_amazon_secrets.txt
+BUCKET_NAME=my-bucket-name
+AWS_ACCESS_KEY_ID=my-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=my-aws-secret-access-key
+EOF
+X=`cat /tmp/awscreds.txt | tr '\n' ','`
+sqlite3 ~fleetsie/fleets/FLEET_NAME/fleet.sqlite "insert into fleet_extra(fleet, extra) values ('FLEET_NAME','$X')"
