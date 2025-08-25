@@ -138,8 +138,6 @@ systemctl enable --now shiftwrapd
 systemctl enable --now bluetooth-autopair
 systemctl enable --now queued-uploader
 systemctl enable leds-off
-# not sure where this is happening, but something is clobbering the suid bit on sudo
-chmod u+s /bin/sudo
 
 info "Disabling LEDs for ethernet and at boot time"
 
@@ -173,3 +171,10 @@ if [[ -f $FLEET_EXTRA ]]; then
 	chown $USER1000:$USER1000 $F
     }
 fi
+
+# weird fixups.  These are workarounds for bugs we haven't been able to track down.
+# not sure where this is happening, but something is clobbering the suid bit on sudo
+chmod u+s /bin/sudo
+
+# again, not sure who is doing this, but ownership of / is changed to 1000:1000
+chown root:root /
