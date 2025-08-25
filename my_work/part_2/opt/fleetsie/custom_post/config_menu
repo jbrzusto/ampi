@@ -68,9 +68,12 @@ function new_sitename () {
 }
 
 function latlong_input () {
-    get_conf LATITUDE latitude
-    get_conf LONGITUDE longitude
-    get_conf ALTITUDE altitude
+    # try read location from the file maintained by shiftwrap
+    if ! . /etc/shiftwrap/location ; then
+	LATITUDE=unset
+	LONGITUDE=unset
+	ALTITUDE=unset
+    fi
     while true; do
 	printf "\nCurrent\n  Latitude: %s\n  Longitude: %s\n  Altitude: %s\n" $LATITUDE $LONGITUDE $ALTITUDE
 	local prompt="\nPick an item number, or 0 to exit this menu:"
@@ -94,7 +97,6 @@ function latlong_input () {
 		   if [[ $lat =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
 		       if [[ ${lat%%.*} -ge -90 && ${lat%%.*} -le 90 ]]; then
 			   LATITUDE=$lat
-			   put_conf latitude $LATITUDE
 			   sw setconf lat $LATITUDE
 			   okay=1
 		       fi
@@ -113,7 +115,6 @@ function latlong_input () {
 		   if [[ $lon =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
 		       if [[ ${lon%%.*} -ge -180 && ${lon%%.*} -le 180 ]]; then
 			   LONGITUDE=$lon
-			   put_conf longitude $LONGITUDE
 			   sw setconf long $LATITUDE
 			   okay=1
 		       fi
@@ -132,7 +133,6 @@ function latlong_input () {
 		   if [[ $alt =~ ^-?[0-9]+(\.[0-9]*)? ]]; then
 		       if [[ ${alt%%.*} -ge -10000 && ${alt%%.*} -le 10000 ]]; then
 			   ALTITUDE=$alt
-			   put_conf altitude $ALTITUDE
 			   sw setconf alt $ALTITUDE
 			   okay=1
 		       fi
