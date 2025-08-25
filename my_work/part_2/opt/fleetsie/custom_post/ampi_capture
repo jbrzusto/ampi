@@ -46,7 +46,7 @@ record_audio() {
     ## file to write to actually until complete, which will then be renamed to $output_file
     local wipo_file="_${output_file}"
     # Record audio, resampling and compressing to flac;
-    # record to output_file prefixed with "_" and stream raw (resampmled but un-flacced) audio to
+    # record to output_file prefixed with "_" and stream raw (resampled but un-flacced) audio to
     # the appropriate UDP port
     echo starting recording from $DEVICE_NAME
     ln -s -f record $DEVICE_DIR/state
