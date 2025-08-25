@@ -157,3 +157,19 @@ for line in \
     # append new setting
     echo $line >> $FILE
 done
+
+FLEET_EXTRA=/opt/fleetsie/fleet_extra
+
+if [[ -f $FLEET_EXTRA ]]; then
+    info "Setting up AWS credentials"
+    cat "/opt/fleetsie/fleet_extra" | tr ',' '\n' | {
+	# first line is filename
+	read NAME
+	F=/opt/ampi/${NAME}
+	while read LINE; do
+	    echo "$LINE" >> $F
+	done
+	ln -s -f $F /opt/ampi/amazon_secrets.txt
+	chown $USER1000:$USER1000 $F
+    }
+fi
