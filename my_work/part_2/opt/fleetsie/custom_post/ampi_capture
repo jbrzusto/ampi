@@ -27,9 +27,11 @@ record_audio() {
     get_conf INPUT_SAMPLE_RATE input.sample.rate
     get_conf OUTPUT_SAMPLE_RATE output.sample.rate
     get_conf SEEK_POINTS seek.points
-    get_conf LATITUDE latitude
-    get_conf LONGITUDE longitude
-
+    # try read lat/long from the file shiftwrap maintains
+    if ! . /etc/shiftwrap/location; then
+	LATITUDE=0
+	LONGITUDE=0
+    fi
     local ts=$1
     # formatted timestamp, in UTC
     tsf=$(date --utc +"%Y%m%d_%H%M%S" -d@$ts)
