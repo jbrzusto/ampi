@@ -303,12 +303,12 @@ function listen_live () {
 	    local devno=`readlink $dir/device_num`
 	    local devname="hw:CARD=$devno,DEV=0"
 	fi
-	ffmpeg -loglevel error -t $(($left - 2))  -f alsa -channels 1 -i hw:$devno -ar $OUTPUT_SAMPLE_RATE  -f s16le -ar 22050 -acodec pcm_s16le -flush_packets 1 -reuse 1 -connect 0 udp://127.0.0.1:$streamport 2>/dev/null &
+	cat /dev/null | ffmpeg -loglevel quiet -t $(($left - 2))  -f alsa -channels 1 -i hw:$devno -ar $OUTPUT_SAMPLE_RATE  -f s16le -ar 22050 -acodec pcm_s16le -flush_packets 1 -reuse 1 -connect 0 udp://127.0.0.1:$streamport 2>/dev/null &
 	STREAM_SAMPLES_PID=$!
     fi
     # start streaming raw audio from the socket to the jack via aplay; this works regardless of whether files
     # are being recorded
-    socat -T 3 -u UDP-RECV:$streamport - 2>/dev/null| aplay -D 'hw:CARD=Headphones,DEV=0' -t raw -r $OUTPUT_SAMPLE_RATE -f S16_LE -d $LISTEN_LIVE_DURATION 2>/dev/null &
+    socat -T 3 -u UDP-RECV:$streamport - 2> /dev/null | aplay -D 'hw:CARD=Headphones,DEV=0' -t raw -r $OUTPUT_SAMPLE_RATE -f S16_LE -d $LISTEN_LIVE_DURATION 2> /dev/null &
     LISTEN_LIVE_PID=$!
     LISTEN_LIVE_SERNO=$serno
     echo Listening to $LISTEN_LIVE_SERNO
