@@ -88,7 +88,7 @@ function latlong_input () {
         case "$REPLY" in
 	    0) quit=1
 	       ;;
-	    1) printf "Enter new Latitude (or Enter): "
+	    1) printf "Enter new Latitude in decimal degrees North (or Enter): "
 	       read lat
 	       if [[ $lat == "" ]]; then
 		   printf "Latitude not changed\n"
@@ -106,7 +106,7 @@ function latlong_input () {
 		   printf "Bad latitude; must be number in range -90...90\n"
 	       fi
 	       ;;
-	    2) printf "Enter new Longitude (or Enter): "
+	    2) printf "Enter new Longitude in decimal degrees East (or Enter): "
 	       read lon
 	       if [[ $lon == "" ]]; then
 		   printf "Longitude not changed\n"
@@ -124,7 +124,7 @@ function latlong_input () {
 		   printf "Bad longitude; must be number in range -180...180\n"
 	       fi
 	       ;;
-	    3) printf "Enter new Altitude (or Enter): "
+	    3) printf "Enter new Altitude in metres above sea level (or Enter): "
 	       read alt
 	       if [[ $alt == "" ]]; then
 		   printf "Altitude not changed\n"
