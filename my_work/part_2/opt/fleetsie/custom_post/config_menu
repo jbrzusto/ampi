@@ -308,10 +308,11 @@ function listen_live () {
     fi
     # start streaming raw audio from the socket to the jack via aplay; this works regardless of whether files
     # are being recorded
-    socat -T 3 -u UDP-RECV:$streamport - 2> /dev/null | aplay -D 'hw:CARD=Headphones,DEV=0' -t raw -r $OUTPUT_SAMPLE_RATE -f S16_LE -d $LISTEN_LIVE_DURATION 2> /dev/null &
+    socat -T 15 -u UDP-RECV:$streamport - 2> /dev/null | aplay -D 'hw:CARD=Headphones,DEV=0' -t raw -r $OUTPUT_SAMPLE_RATE -f S16_LE -d $LISTEN_LIVE_DURATION 2> /dev/null &
     LISTEN_LIVE_PID=$!
     LISTEN_LIVE_SERNO=$serno
     echo Listening to $LISTEN_LIVE_SERNO
+    echo "(you should hear sound within 15 seconds)"
 }
 
 function stop_listening() {
