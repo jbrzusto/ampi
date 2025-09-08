@@ -132,6 +132,25 @@ function shift_changes () {
     fi
 }
 
+# shifts returns names of shifts for service $1
+function get_shifts () {
+    get service/$1 | jq -r '.Shifts|keys|join("\n")'
+}
+
+# get_put_shift returns shift $2 for service $1 (if $3 == "")
+# otherwise, it replaces shift $2 for service $1 with a shift
+# having Start=$3, Stop=$4, Setup=$5, Takedown=$6, StopBeforeStart=$7
+function get_put_shift () {
+    if [[ ! $3 ]]; then
+	if ! get service/$1 | jq -r ".Shifts[\"$2\"]|(.Start,.Stop,.Setup,.Takedown,.StopBeforeStart)" 2>/dev/null; then
+	    echo bad service or shift name
+	fi
+    fi
+}
+
+function del_shift () {
+}
+
 function usage () {
     # The text below is copied from README.md, with backticks and double-asterisks removed
     cat <<EOF
@@ -222,25 +241,45 @@ shiftchanges SERVICE YYYY-MM-DD RAW
 
    - shows *all* shift-changes that would be scheduled on date YYYY-MM-DD for service named SERVICE,
      before merging overlapping shifts and without removing shifts shorter than min_runtime
-EOF
 
+sw shifts SERVICE
+
+   - lists names of shifts for service SERVICE
+
+sw shift SERVICE SHIFTNAME
+
+   - shows shift SHIFTNAME of service SERVICE
+
+sw shift SERVICE SHIFTNAME START STOP SETUP TAKEDOWN
+
+   - adds or replaces shift SHIFTNAME of service SERVICE with given START and STOP times, and SETUP and TAKEDOWN scripts
+
+sw delshift SERVICE SHIFTNAME
+
+   - deletes the shift named SHIFTNAME from service SERVICE
+
+EOF
 }
+
 ## switch by 1st arg
 
 ACTION=$1
 shift
 
 case $ACTION in
-    config ) config ;;
-    setconf ) set_conf $1 $2 ;;
-    "time" ) get_time ;;
-    manage ) manage_service $1 $2 ;;
-    unmanage ) unmanage_service $1 $2 ;;
-    services ) list_services ;;
-    service ) show_service $1 ;;
-    shiftchanges ) shift_changes $1 $2 $3 ;;
-    run ) run_service $1 $2 $3 ;;
-    norun ) norun_service $1 ;;
+    config   ) config "$*" ;;
+    setconf ) set_conf "$*" ;;
+    "time" ) get_time "$*" ;;
+    manage ) manage_service "$*" ;;
+    unmanage ) unmanage_service "$*" ;;
+    services ) list_services "$*" ;;
+    service ) show_service "$*" ;;
+    shiftchanges ) shift_changes "$*" ;;
+    run ) run_service "$*" ;;
+    norun ) norun_service "$*" ;;
+    "shifts" ) get_shifts "$*" ;;
+    "shift" ) get_put_shift "$*" ;;
+    delshift ) del_shift "$" ;;
     * ) usage && exit -1
 esac
 exit 0
