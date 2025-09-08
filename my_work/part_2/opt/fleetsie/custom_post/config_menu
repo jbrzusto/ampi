@@ -237,8 +237,8 @@ function wifi_menu () {
         else
             printf "Not connected.\n\n"
         fi
-        printf "Pick 1 for Rescan, a network number,\nor 0 to exit this menu:\n"
-        my_select "Rescan" "${all[@]}"
+        printf "Pick 1 for Rescan, 2 to set up a non-local network, a network number,\nor 0 to exit this menu:\n"
+        my_select "Rescan" "Non-local network" "${all[@]}"
         case "$REPLY" in
             0) return
 	       ;;
@@ -246,7 +246,31 @@ function wifi_menu () {
                $WPA scan
                sleep 5
                ;;
-            *) ESSID="${all[$(( $REPLY - 2 ))]}";
+	    2) printf "Enter the network name (SSID)\nor hit Enter to cancel: "
+               read ESSID
+               if [[ "$ESSID" == "" ]]; then
+		   printf "non-local setup cancelled.\n"
+		   continue
+               fi
+               printf "Enter passphrase for network '%s',\nor hit Enter to cancel: " "$ESSID"
+               read P
+	       if [[ "$P" == "" ]]; then
+		   printf "non-local setup cancelled.\n"
+		   continue
+               fi
+	       # we use ESSID as the connection name too.
+	       # ensure there isn't already one there.
+	       if nmcli con show "$ESSID" > /dev/null 2>/dev/null; then
+		   nmcli con del "$ESSID" > /dev/null 2>/dev/null;
+		   printf "Old config for network '%s' deleted.\n" "$ESSID"
+	       fi
+	       if nmcli connection add type wifi con-name "$ESSID" ssid "$ESSID" 802-11-wireless-security.key-mgmt WPA-PSK 802-11-wireless-security.psk "$P" > /dev/null 2>/tmp/nmclierr.txt; then
+		   printf "New config for network '%s' saved.\n" "$ESSID"
+	       else
+		   printf "Weird - error adding config for network: %s\n" "`cat /tmp/nmclierr.txt`"
+	       fi
+	       ;;
+            *) ESSID="${all[$(( $REPLY - 3 ))]}";
                printf "Enter passphrase for network '%s',\nor hit Enter to use existing password: " "$ESSID"
                read P
                if [[ "$P" != "" ]]; then
