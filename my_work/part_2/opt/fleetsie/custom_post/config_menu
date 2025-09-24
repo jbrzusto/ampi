@@ -22,7 +22,7 @@ function site_menu () {
 	local quit=""
 	echo -e "$prompt "
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0) quit=1
 	       ;;
 	    1) sitename_select
@@ -31,9 +31,9 @@ function site_menu () {
 	       ;;
 	    3) set_timezone
 	       ;;
-        esac
+	esac
 	if [[ "$quit" == 1 ]]; then
-            break
+	    break
 	fi
     done
 }
@@ -85,7 +85,7 @@ function latlong_input () {
 	echo -e "$prompt "
 	local okay=""
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0) quit=1
 	       ;;
 	    1) printf "Enter new Latitude in decimal degrees North (or Enter): "
@@ -142,9 +142,9 @@ function latlong_input () {
 		   printf "Bad altitude; must be number in range -10000...10000\n"
 	       fi
 	       ;;
-        esac
+	esac
 	if [[ "$quit" == 1 ]]; then
-            break
+	    break
 	fi
     done
 }
@@ -226,66 +226,73 @@ function my_select () {
 }
 
 function wifi_menu () {
+    SCAN_RESULTS=`mktemp`
     WPA="wpa_cli -i wlan0"
     NMCLI="/usr/bin/nmcli"
     while true; do
-        printf "\nWiFi Config\n\n"
-        curr=`$WPA status | grep ^ssid= | sed -e 's/^ssid=//'`
-        mapfile -t all < <($WPA scan_results | awk '$5 !~ /^\\x00/ && $5 != "" {$1="";$2="";$4="";print }' | sort -n -r | tail -n+2 | awk '{for(i=1; i < NF; ++i) $i=$(i+1);--NF;print}' )
-        if [[ $curr != "" ]]; then
-            printf "Connected to $curr\n\n"
-        else
-            printf "Not connected.\n\n"
-        fi
-        printf "Pick 1 for Rescan, 2 to set up a non-local network, a network number,\nor 0 to exit this menu:\n"
-        my_select "Rescan" "Non-local network" "${all[@]}"
-        case "$REPLY" in
-            0) return
+	printf "\nWiFi Config\n\n"
+	curr=`$WPA status | grep ^ssid= | sed -e 's/^ssid=//'`
+	$WPA scan_results | tail +2l | sort -r -n -k3 > $SCAN_RESULTS
+	mapfile -t all < <(awk '$5!=""{for(i=1; i < NF; ++i) $i=$(i+4);--NF;print}' $SCAN_RESULTS)
+	mapfile -t bssid < <(awk '$5!=""{print toupper($1)}' $SCAN_RESULTS)
+	if [[ $curr != "" ]]; then
+	    printf "Connected to $curr\n\n"
+	else
+	    printf "Not connected.\n\n"
+	fi
+	printf "Pick 1 for Rescan, 2 to set up a non-local network, a network number,\nor 0 to exit this menu:\n"
+	my_select "Rescan" "Non-local network" "${all[@]}"
+	case "$REPLY" in
+	    0) return
 	       ;;
-            1) echo scanning...
-               $WPA scan
-               sleep 5
-               ;;
+	    1) echo scanning...
+	       $WPA scan
+	       sleep 5
+	       ;;
 	    2) printf "Enter the network name (SSID)\nor hit Enter to cancel: "
-               read ESSID
-               if [[ "$ESSID" == "" ]]; then
+	       read -r ESSID
+	       if [[ ! $ESSID ]]; then
 		   printf "non-local setup cancelled.\n"
 		   continue
-               fi
-               printf "Enter passphrase for network '%s',\nor hit Enter to cancel: " "$ESSID"
-               read P
-	       if [[ "$P" == "" ]]; then
+	       fi
+	       printf "Enter passphrase for network '%q',\nor hit Enter to cancel: " "$ESSID"
+	       read -r P
+	       if [[ ! $P ]]; then
 		   printf "non-local setup cancelled.\n"
 		   continue
-               fi
+	       fi
 	       # we use ESSID as the connection name too.
 	       # ensure there isn't already one there.
 	       if nmcli con show "$ESSID" > /dev/null 2>/dev/null; then
 		   nmcli con del "$ESSID" > /dev/null 2>/dev/null;
 		   printf "Old config for network '%s' deleted.\n" "$ESSID"
 	       fi
-	       if nmcli connection add type wifi con-name "$ESSID" ssid "$ESSID" 802-11-wireless-security.key-mgmt WPA-PSK 802-11-wireless-security.psk "$P" > /dev/null 2>/tmp/nmclierr.txt; then
-		   printf "New config for network '%s' saved.\n" "$ESSID"
+	       printf -v CMD "nmcli connection add type wifi con-name %q ssid %q 802-11-wireless-security.key-mgmt WPA-PSK 802-11-wireless-security.psk %q > /dev/null 2>/tmp/nmclierr.txt" "$ESSID" "$ESSID" "$P"
+	       if bash -c "$CMD"; then
+		   printf "New config for network '%q' saved.\n" "$ESSID"
 	       else
 		   printf "Weird - error adding config for network: %s\n" "`cat /tmp/nmclierr.txt`"
 	       fi
 	       ;;
-            *) ESSID="${all[$(( $REPLY - 3 ))]}";
-               printf "Enter passphrase for network '%s',\nor hit Enter to use existing password: " "$ESSID"
-               read P
-               if [[ "$P" != "" ]]; then
-                   P="password \"$P\""
-               fi
-               CMD="$NMCLI device wifi con \"$ESSID\" $P 2>&1"
-	       printf "Trying to connect to $ESSID...\n"
-               read CONRES < <( bash -c "$CMD" 2>&1)
-               if [[ "$CONRES" =~ "successfully activated" ]]; then
-                   printf "\nSuccess:  Connected to %s\n" "$ESSID"
-               else
-                   printf "\nFailed to connect to %s - bad password?\nError was: %s\n" "$ESSID" "$CONRES"
-               fi
-               ;;
-        esac
+	    *) BSSID="${bssid[$(( $REPLY - 3 ))]}";
+	       ESSID="${all[$(( $REPLY - 3 ))]}";
+	       printf "Enter passphrase for network %s,\nor hit Enter to use existing\npassword: " "$ESSID"
+	       # read with '-r' to prevent '\' from having special meaning in input
+	       read -r P
+	       if [[ $P ]]; then
+		   printf -v CMD "$NMCLI device wifi con %s password %q" "$BSSID" "$P"
+	       else
+		   printf -v CMD "$NMCLI device wifi con %s" "$BSSID"
+	       fi
+#	       printf "Trying to connect to \"%q\" with \"%q\"...\ncommand is \"%q\"" "$ESSID" "$P" "$CMD"
+	       read CONRES < <( bash -c "$CMD" 2>&1)
+	       if [[ "$CONRES" =~ "successfully activated" ]]; then
+		   printf "\nSuccess:  Connected to %s\n" "$ESSID"
+	       else
+		   printf "\nFailed to connect to %s - bad password?\nError was: %s\n" "$ESSID" "$CONRES"
+	       fi
+	       ;;
+	esac
     done
 }
 
@@ -346,7 +353,7 @@ function stop_listening() {
 	sleep 0.1
 	kill -INT $LISTEN_LIVE_PID > /dev/null 2>&1
 	echo Stopped listening to $LISTEN_LIVE_SERNO
- 	LISTEN_LIVE_PID=""
+	LISTEN_LIVE_PID=""
 	LISTEN_LIVE_SERNO=""
 	stop_streaming_samples
     fi
@@ -380,7 +387,7 @@ function audiomoth_config () {
     get_conf AM_D48 am.d48
     while true; do
 	local am_other_options="$AM_FILTER ${AM_ESM:+ESM} ${AM_D48:+D48}"
-	if [[ "$am_other_options" == "  " ]]; then
+	if [[ "$am_other_options" == "	" ]]; then
 	    am_other_options="(none)"
 	fi
 	local prompt="Pick an item number, or 0 to exit this menu:"
@@ -389,7 +396,7 @@ function audiomoth_config () {
 	       $INPUT_SAMPLE_RATE "${AM_GAIN_VALUES[$AM_GAIN_LEVEL]}" "$am_other_options"
 	echo -e "\n$prompt "
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0) if [[ $AM_CONFIG_CHANGED ]]; then
 		   printf "Changes to configuration have been saved,\nbut only take effect at the next recording\nperiod.  Do you want to restart recording now\nusing the new configuration (y/N)? "
 		   local resp
@@ -581,7 +588,7 @@ function audio_menu () {
     echo Attached Audiomoths:
     get_audiomoths
     if [[ ${#AM[*]} -gt 0 ]]; then
-	echo "Serial Number     State  Until"
+	echo "Serial Number	State  Until"
 	local sn
 	for sn in ${AM[*]}; do
 	    state=`readlink $AM_DEV_DIR/$sn/state`
@@ -609,7 +616,7 @@ function audio_menu () {
 	local quit=""
 	echo -e "$prompt "
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0) quit=1
 	       ;;
 	    1) printf "Active uploads:\n"
@@ -633,7 +640,7 @@ function audio_menu () {
 	       ;;
 	    3) get_conf DATA_DIR data.dir
 	       echo "Files in $DATA_DIR waiting for upload:"
-	       (cd /data; (stat -c "%n %s" [^_]* 2>/dev/null || echo "  None." ) | sed -e 's/@/\//g')
+	       (cd /data; (stat -c "%n %s" [^_]* 2>/dev/null || echo "	None." ) | sed -e 's/@/\//g')
 	       echo "Incomplete files in $DATA_DIR:"
 	       (cd /data; (stat -c "%n %s" _*  2>/dev/null || echo "  None." ) | sed -e 's/@/\//g')
 	       ;;
@@ -652,9 +659,9 @@ function audio_menu () {
 		   fi
 	       fi
 	       ;;
-        esac
+	esac
 	if [[ "$quit" == 1 ]]; then
-            break
+	    break
 	fi
     done
     stop_listening
@@ -674,7 +681,7 @@ function recording_config () {
 	       $OUTPUT_SAMPLE_RATE $RECORDING_DURATION $RECORDING_SPACING
 	echo -e "\n$prompt "
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0) if [[ $REC_CONFIG_CHANGED ]]; then
 		   printf "Changes to configuration have been saved,\nbut only take effect at the next recording\nperiod.  Do you want to restart recording now\nusing the new configuration (y/N)? "
 		   local resp
@@ -777,7 +784,7 @@ function storage_info () {
 	local options=("Select existing credentials" "Enter new credentials" )
 	printf "\nCurrent cloud credentials:\n"
 	get_conf SECRETS_FILE secrets.file
-	if [[ -f $SECRETS_FILE  ]]; then
+	if [[ -f $SECRETS_FILE	]]; then
 	    echo "# `readlink $SECRETS_FILE`"
 	    cat $SECRETS_FILE
 	else
@@ -785,7 +792,7 @@ function storage_info () {
 	fi
 	echo -e "\n$prompt "
 	my_select "${options[@]}"
-        case "$REPLY" in
+	case "$REPLY" in
 	    0 ) return ;;
 	    1 ) select_cloud_credentials ;;
 	    2 ) enter_new_credentials ;;
@@ -906,7 +913,7 @@ function start_recording () {
 	    AM=`readlink $f`
 	    systemctl restart ampi-capture@${f}-$AM
 	    echo started recording on AM-$AM with duration `sqlite3 /opt/ampi/ampi_config.sqlite "select val from conf where key='recording.duration'"` s
-            qpopd
+	    qpopd
 	    return
 	fi
     done
@@ -924,7 +931,7 @@ function stop_recording () {
 	    AM=`readlink $f`
 	    systemctl stop ampi-capture@${f}-$AM
 	    echo stopped recording on AM-$AM
-            qpopd
+	    qpopd
 	    return
 	fi
     done
@@ -943,20 +950,20 @@ while true; do
     echo -e "$title\n$prompt "
     my_select "${options[@]}"
     case "$REPLY" in
-        0) echo "Goodbye!"
+	0) echo "Goodbye!"
 	   QUIT=1
 	   ;;
 	1) site_menu
 	   ;;
-        2) wifi_menu
+	2) wifi_menu
 	   ;;
-        3) audio_menu
+	3) audio_menu
 	   ;;
-        4) storage_info
+	4) storage_info
 	   ;;
 	5) remote_update
 	   ;;
-        6) run_shell
+	6) run_shell
 	   ;;
 	7) start_recording
 	   ;;
@@ -964,6 +971,6 @@ while true; do
 	   ;;
     esac
     if [[ "$QUIT" == 1 ]]; then
-        break
+	break
     fi
 done
