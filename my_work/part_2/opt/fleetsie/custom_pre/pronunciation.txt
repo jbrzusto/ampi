@@ -30,3 +30,5 @@ tmp
 A, W, S
  AWS
 A, W, S
+ffmpeg
+eff-eff-em-peg
