@@ -35,14 +35,14 @@ fi
 # put sends JSON payload in $2 to path in $1
 function put () {
     if ! ${FETCH} -X PUT -H "Content-type: application/json" --data "$2" $SERVER/$1; then
-	echo unable to send data to shiftwrap API - maybe you need to do this as root? >&2
+	printf "unable to PUT to shiftwrap API - maybe you need to do this as root?\n" >&2
     fi
 }
 
 # get fetches from path in $1
 function get () {
     if ! ${FETCH} $SERVER/$1; then
-	echo unable to read data from shiftwrap API - maybe you need to do this as root? >&2
+	printf "unable to GET from shiftwrap API - maybe you need to do this as root?\n" >&2
     fi
 }
 
@@ -56,7 +56,7 @@ function set_conf () {
     case $1 in
 	lat) put config '{"Observer":{"Latitude":'$2'}}' ;;
 	long) put config '{"Observer":{"Longitude":'$2'}}' ;;
-	alt) put config  '{"Observer":{"Altitude":'$2'}}' ;;
+	alt | height) put config  '{"Observer":{"Altitude":'$2'}}' ;;
 	minruntime) put config '{"DefaultMinRuntime":"'$2'"}' ;;
     esac
 }
@@ -149,6 +149,7 @@ function get_put_shift () {
 }
 
 function del_shift () {
+    return
 }
 
 function usage () {
@@ -267,19 +268,19 @@ ACTION=$1
 shift
 
 case $ACTION in
-    config   ) config "$*" ;;
-    setconf ) set_conf "$*" ;;
-    "time" ) get_time "$*" ;;
-    manage ) manage_service "$*" ;;
-    unmanage ) unmanage_service "$*" ;;
-    services ) list_services "$*" ;;
-    service ) show_service "$*" ;;
-    shiftchanges ) shift_changes "$*" ;;
-    run ) run_service "$*" ;;
-    norun ) norun_service "$*" ;;
-    "shifts" ) get_shifts "$*" ;;
-    "shift" ) get_put_shift "$*" ;;
-    delshift ) del_shift "$" ;;
+    config   ) config "$@" ;;
+    setconf ) set_conf "$@" ;;
+    "time" ) get_time "$@" ;;
+    manage ) manage_service "$@" ;;
+    unmanage ) unmanage_service "$@" ;;
+    services ) list_services "$@" ;;
+    service ) show_service "$@" ;;
+    shiftchanges ) shift_changes "$@" ;;
+    run ) run_service "$@" ;;
+    norun ) norun_service "$@" ;;
+    "shifts" ) get_shifts "$@" ;;
+    "shift" ) get_put_shift "$@" ;;
+    delshift ) del_shift "$@" ;;
     * ) usage && exit -1
 esac
 exit 0
