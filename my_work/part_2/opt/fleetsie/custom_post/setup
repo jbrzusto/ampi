@@ -47,7 +47,7 @@ USER1000=`id -nu 1000`
 
 if ! which ffmpeg || ! which flac || ! which jq || ! which socat ; then
     info "Installing packages ffmpeg, flac, jq and socat"
-    apt install -y ffmpeg flac jq socat
+    apt-get install -y ffmpeg flac jq socat
 fi
 
 if ! which aws; then
